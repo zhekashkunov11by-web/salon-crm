@@ -72,7 +72,7 @@ export async function sendDailyReportNotification(report: {
 }): Promise<void> {
   const emoji = report.plan_progress >= 100 ? '🎉' : report.plan_progress >= 70 ? '📈' : '📉'
   const text = `${emoji} *Итоги дня ${report.date}*\n\n` +
-    `💰 Выручка: *${new Intl.NumberFormat('ru-RU').format(report.total)} ₽*\n` +
+    `💰 Выручка: *${new Intl.NumberFormat('ru-BY').format(report.total)} Br*\n` +
     `👥 Клиентов: ${report.clients}\n` +
     `📊 План месяца: ${report.plan_progress}%`
 

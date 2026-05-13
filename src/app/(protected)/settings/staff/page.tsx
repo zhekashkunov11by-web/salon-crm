@@ -135,7 +135,7 @@ export default function StaffPage() {
                 />
               </div>
               <div>
-                <label className="label">НДФЛ, %</label>
+                <label className="label">Подоходный налог, %</label>
                 <input
                   type="number"
                   className="input"

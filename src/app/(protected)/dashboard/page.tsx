@@ -63,9 +63,9 @@ export default async function DashboardPage() {
           href="/crm"
         />
         <MetricCard
-          value={todayReport ? new Intl.NumberFormat('ru-RU').format(
+          value={todayReport ? new Intl.NumberFormat('ru-BY').format(
             (todayReport.revenue_cash || 0) + (todayReport.revenue_card || 0) + (todayReport.revenue_online || 0)
-          ) + ' ₽' : '—'}
+          ) + ' Br' : '—'}
           label="Выручка сегодня"
           color="purple"
           href="/daily-report"

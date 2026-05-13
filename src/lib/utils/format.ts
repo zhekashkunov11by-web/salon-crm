@@ -1,30 +1,28 @@
-// Форматирование чисел и дат для российского рынка
+// Форматирование чисел и дат (Беларусь, BYN)
 
-// Форматировать сумму в рублях
+// Форматировать сумму в белорусских рублях
 export function formatMoney(amount: number): string {
-  return new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency: 'RUB',
+  return new Intl.NumberFormat('ru-BY', {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount)
+    maximumFractionDigits: 2,
+  }).format(amount) + ' Br'
 }
 
 // Форматировать число с разделителями
 export function formatNumber(n: number): string {
-  return new Intl.NumberFormat('ru-RU').format(n)
+  return new Intl.NumberFormat('ru-BY').format(n)
 }
 
 // Форматировать дату ДД.ММ.ГГГГ
 export function formatDate(date: string | Date): string {
   const d = typeof date === 'string' ? new Date(date) : date
-  return new Intl.DateTimeFormat('ru-RU').format(d)
+  return new Intl.DateTimeFormat('ru-BY').format(d)
 }
 
 // Форматировать дату и время
 export function formatDateTime(date: string | Date): string {
   const d = typeof date === 'string' ? new Date(date) : date
-  return new Intl.DateTimeFormat('ru-RU', {
+  return new Intl.DateTimeFormat('ru-BY', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',

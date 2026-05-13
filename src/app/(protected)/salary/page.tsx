@@ -147,7 +147,7 @@ export default function SalaryPage() {
   const totalNetAdmins = adminRows.reduce((s, r) => s + r.net_salary, 0)
 
   function exportCSV(rows: SalaryRow[]) {
-    const headers = ['Сотрудник', 'Роль', 'Выручка', 'Смен', 'Начислено (гросс)', 'НДФЛ', 'К выплате (нетто)']
+    const headers = ['Сотрудник', 'Роль', 'Выручка', 'Смен', 'Начислено (гросс)', 'Подоходный налог', 'К выплате (нетто)']
     const data = rows.map(r => [
       r.staff.name,
       ROLE_LABELS[r.staff.role] || r.staff.role,
@@ -243,7 +243,7 @@ export default function SalaryPage() {
                     <th>Начислено</th>
                   </>
                 )}
-                <th>НДФЛ</th>
+                <th>Подоходный налог</th>
                 <th className="text-right">К выплате</th>
               </tr>
             </thead>

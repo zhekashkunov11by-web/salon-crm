@@ -121,7 +121,7 @@ export default function CrmPage() {
         <div>
           <h1 className="page-title">Воронка заявок</h1>
           <p className="text-xs text-gray-400 mt-0.5">
-            {leads.length} заявок · Потенциал: {new Intl.NumberFormat('ru-RU').format(totalAmount)} ₽ · Новых: {newLeads}
+            {leads.length} заявок · Потенциал: {new Intl.NumberFormat('ru-BY').format(totalAmount)} Br · Новых: {newLeads}
           </p>
         </div>
         <div className="flex gap-2">
