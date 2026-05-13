@@ -171,7 +171,7 @@ DIKIDI_COMPANY_ID=ваш_id`}
               {logs.map(log => (
                 <tr key={log.id}>
                   <td className="text-xs text-gray-500">
-                    {new Date(log.synced_at).toLocaleString('ru-RU')}
+                    {new Date(log.synced_at).toLocaleString('ru-BY')}
                   </td>
                   <td>{log.clients_synced}</td>
                   <td>{log.visits_synced}</td>

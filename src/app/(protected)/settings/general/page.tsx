@@ -84,7 +84,7 @@ export default function GeneralSettingsPage() {
             </div>
 
             <div>
-              <label className="label">Ежемесячный план выручки, ₽</label>
+              <label className="label">Ежемесячный план выручки, Br</label>
               <input
                 type="number"
                 value={settings.monthly_plan}

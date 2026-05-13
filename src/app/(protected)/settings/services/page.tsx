@@ -139,7 +139,7 @@ export default function ServicesPage() {
               </div>
             </div>
             <div>
-              <label className="label">Цена, ₽ *</label>
+              <label className="label">Цена, Br *</label>
               <input
                 type="number"
                 className="input"

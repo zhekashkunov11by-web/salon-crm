@@ -101,7 +101,7 @@ export default function ReferencesPage() {
                 </select>
               </div>
               <div>
-                <label className="label">Цена закупки, ₽</label>
+                <label className="label">Цена закупки, Br</label>
                 <input
                   type="number"
                   className="input"
@@ -138,7 +138,7 @@ export default function ReferencesPage() {
               <tr>
                 <th>Название</th>
                 <th>Ед. изм.</th>
-                <th>Цена закупки, ₽</th>
+                <th>Цена закупки, Br</th>
               </tr>
             </thead>
             <tbody>

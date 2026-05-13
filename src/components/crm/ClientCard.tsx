@@ -308,7 +308,7 @@ export function ClientCard({ lead, onClose, onStatusChange, statuses, staff, onD
                   </select>
                 </div>
                 <div>
-                  <label className="label">Сумма, ₽</label>
+                  <label className="label">Сумма, Br</label>
                   <input
                     type="number"
                     className="input"

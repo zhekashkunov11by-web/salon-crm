@@ -207,7 +207,7 @@ export default function CrmPage() {
                 </div>
               </div>
               <div>
-                <label className="label">Сумма, ₽</label>
+                <label className="label">Сумма, Br</label>
                 <input
                   type="number"
                   className="input"

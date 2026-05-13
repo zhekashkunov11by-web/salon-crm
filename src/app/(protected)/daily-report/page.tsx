@@ -228,7 +228,7 @@ export default function DailyReportPage() {
         <div className="card-body space-y-4">
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="label">💵 Наличные, ₽</label>
+              <label className="label">💵 Наличные, Br</label>
               <input
                 type="number"
                 className="input text-right"
@@ -239,7 +239,7 @@ export default function DailyReportPage() {
               />
             </div>
             <div>
-              <label className="label">💳 Карта, ₽</label>
+              <label className="label">💳 Карта, Br</label>
               <input
                 type="number"
                 className="input text-right"
@@ -250,7 +250,7 @@ export default function DailyReportPage() {
               />
             </div>
             <div>
-              <label className="label">📱 Онлайн, ₽</label>
+              <label className="label">📱 Онлайн, Br</label>
               <input
                 type="number"
                 className="input text-right"
@@ -291,7 +291,7 @@ export default function DailyReportPage() {
               />
             </div>
             <div>
-              <label className="label">💸 Расходы нал., ₽</label>
+              <label className="label">💸 Расходы нал., Br</label>
               <input
                 type="number"
                 className="input text-right"

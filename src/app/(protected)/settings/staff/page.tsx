@@ -164,7 +164,7 @@ export default function StaffPage() {
               </div>
             ) : (
               <div>
-                <label className="label">Оклад за смену, ₽</label>
+                <label className="label">Оклад за смену, Br</label>
                 <input
                   type="number"
                   className="input"
@@ -214,7 +214,7 @@ export default function StaffPage() {
                   <td><span className={ROLE_COLORS[m.role]}>{ROLE_LABELS[m.role]}</span></td>
                   <td>
                     {m.role === 'admin'
-                      ? `${m.salary_base_per_shift || 0} ₽/смену`
+                      ? `${m.salary_base_per_shift || 0} Br/смену`
                       : `${m.rate_percent}%`
                     }
                   </td>

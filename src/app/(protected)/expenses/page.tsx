@@ -244,7 +244,7 @@ export default function ExpensesPage() {
                 />
               </div>
               <div>
-                <label className="label">Цена за ед., ₽</label>
+                <label className="label">Цена за ед., Br</label>
                 <input
                   type="number"
                   className="input"
@@ -255,7 +255,7 @@ export default function ExpensesPage() {
                 />
               </div>
               <div>
-                <label className="label">Сумма, ₽ *</label>
+                <label className="label">Сумма, Br *</label>
                 <input
                   type="number"
                   className="input"
