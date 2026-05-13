@@ -55,6 +55,12 @@ const SETTINGS_SECTIONS = [
     title: 'Telegram уведомления',
     desc: 'Бот, чаты, какие события отправлять',
   },
+  {
+    href: '/settings/ad-platforms',
+    icon: '📡',
+    title: 'Рекламные платформы',
+    desc: 'Facebook, Instagram, Яндекс Директ, VK, Google Ads, Telegram Ads',
+  },
 ]
 
 export default function SettingsPage() {
