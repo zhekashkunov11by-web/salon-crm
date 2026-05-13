@@ -16,7 +16,7 @@ export default function GeneralSettingsPage() {
   const [settings, setSettings] = useState<Settings>({
     salon_name: 'Восторг',
     monthly_plan: '300000',
-    timezone: 'Europe/Moscow',
+    timezone: 'Europe/Minsk',
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -106,13 +106,12 @@ export default function GeneralSettingsPage() {
                 onChange={e => setSettings(s => ({ ...s, timezone: e.target.value }))}
                 className="input"
               >
+                <option value="Europe/Minsk">Минск (UTC+3)</option>
                 <option value="Europe/Moscow">Москва (UTC+3)</option>
+                <option value="Europe/Kiev">Киев (UTC+2/+3)</option>
+                <option value="Europe/Warsaw">Варшава (UTC+1/+2)</option>
                 <option value="Europe/Samara">Самара (UTC+4)</option>
                 <option value="Asia/Yekaterinburg">Екатеринбург (UTC+5)</option>
-                <option value="Asia/Novosibirsk">Новосибирск (UTC+7)</option>
-                <option value="Asia/Krasnoyarsk">Красноярск (UTC+7)</option>
-                <option value="Asia/Irkutsk">Иркутск (UTC+8)</option>
-                <option value="Asia/Vladivostok">Владивосток (UTC+10)</option>
               </select>
             </div>
 

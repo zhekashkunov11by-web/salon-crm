@@ -137,7 +137,7 @@ export default function AdPlatformsPage() {
       }
     })
 
-    const payload = {
+    const dbPayload = {
       channel: channelKey,
       is_enabled: !!(formData.access_token && formData.account_id),
       access_token: formData.access_token || null,
@@ -148,12 +148,20 @@ export default function AdPlatformsPage() {
 
     const existing = settings[channelKey]
     if (existing) {
-      await supabase.from('ad_channel_settings').update(payload).eq('id', existing.id)
+      await supabase.from('ad_channel_settings').update(dbPayload).eq('id', existing.id)
     } else {
-      await supabase.from('ad_channel_settings').insert(payload)
+      await supabase.from('ad_channel_settings').insert(dbPayload)
     }
 
-    setSettings(s => ({ ...s, [channelKey]: { ...(s[channelKey] || { id: '', channel: channelKey }), ...payload } }))
+    const stateEntry: AdChannelSetting = {
+      id: settings[channelKey]?.id || '',
+      channel: channelKey,
+      is_enabled: dbPayload.is_enabled,
+      access_token: dbPayload.access_token ?? undefined,
+      account_id: dbPayload.account_id ?? undefined,
+      extra: dbPayload.extra as Record<string, string> | undefined,
+    }
+    setSettings(s => ({ ...s, [channelKey]: stateEntry }))
     setSaving(null)
     setExpanded(null)
   }

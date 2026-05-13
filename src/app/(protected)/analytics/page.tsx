@@ -4,9 +4,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatMoney, daysSince, formatMonth } from '@/lib/utils/format'
 import {
-  AreaChart, Area, BarChart, Bar, LineChart, Line,
+  AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend, ReferenceLine,
+  PieChart, Pie, Cell, Legend,
 } from 'recharts'
 
 interface DailyReport {
@@ -101,13 +101,12 @@ export default function AnalyticsPage() {
     // 12 месяцев назад для тренда
     const trend12From = new Date(y, m - 13, 1).toISOString().slice(0, 10)
 
-    const [curReports, prevReports, allReports, clientsRes, curVisits, prevVisits] = await Promise.all([
+    const [curReports, prevReports, allReports, clientsRes, curVisits] = await Promise.all([
       supabase.from('daily_reports').select('*').gte('date', from).lte('date', to).order('date'),
       supabase.from('daily_reports').select('*').gte('date', prevFrom).lte('date', prevTo),
       supabase.from('daily_reports').select('date,revenue_cash,revenue_card,revenue_online,clients_count,new_clients_count').gte('date', trend12From).order('date'),
       supabase.from('clients').select('id, created_at, last_visit_date, total_revenue, visits_count, source'),
       supabase.from('visits').select('visit_date, amount, service_name').gte('visit_date', from).lte('visit_date', to),
-      supabase.from('visits').select('amount').gte('visit_date', prevFrom).lte('visit_date', prevTo),
     ])
 
     setReports(allReports.data as DailyReport[] || [])
@@ -252,8 +251,8 @@ export default function AnalyticsPage() {
               <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false}
                 tickFormatter={v => v >= 1000 ? `${Math.round(v / 1000)}к` : v} />
-              <Tooltip formatter={(v: number, name: string) =>
-                name === 'Выручка' ? [formatMoney(v), name] : [v, name]} />
+              <Tooltip formatter={(v, name) =>
+                name === 'Выручка' ? [formatMoney(Number(v)), String(name)] : [v, name]} />
               <Legend />
               <Area type="monotone" dataKey="Выручка" stroke="#7c3aed" strokeWidth={2.5}
                 fill="url(#gRevenue)" dot={{ fill: '#7c3aed', r: 3 }} activeDot={{ r: 5 }} />
@@ -281,7 +280,7 @@ export default function AnalyticsPage() {
               <XAxis dataKey="day" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false}
                 tickFormatter={v => v >= 1000 ? `${Math.round(v / 1000)}к` : v} />
-              <Tooltip formatter={(v: number, name: string) => [formatMoney(v), name]} />
+              <Tooltip formatter={(v, name) => [formatMoney(Number(v)), String(name)]} />
               <Legend />
               <Bar dataKey="Нал" stackId="a" fill="#16a34a" radius={[0, 0, 0, 0]} />
               <Bar dataKey="Карта" stackId="a" fill="#2563eb" />
@@ -347,7 +346,7 @@ export default function AnalyticsPage() {
                       <Cell key={i} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v: number) => [`${v} чел.`]} />
+                  <Tooltip formatter={(v) => [`${v} чел.`]} />
                 </PieChart>
               ) : (
                 <div className="w-40 h-40 flex items-center justify-center text-gray-300 text-sm">Нет данных</div>

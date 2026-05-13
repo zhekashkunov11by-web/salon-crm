@@ -368,7 +368,7 @@ export default function MarketingPage() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                   <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v: number) => formatMoney(v)} />
+                  <Tooltip formatter={(v) => [formatMoney(Number(v)), 'Расходы']} />
                   <Bar dataKey="Расходы" fill="#dc2626" />
                 </BarChart>
               </ResponsiveContainer>
@@ -387,7 +387,7 @@ export default function MarketingPage() {
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
                   <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={90}
-                    dataKey="value" label={({ name, percent }) => `${name} ${Math.round(percent * 100)}%`}
+                    dataKey="value" label={({ name, percent }) => `${name} ${Math.round((percent ?? 0) * 100)}%`}
                     labelLine={true}>
                     {pieData.map((_, i) => (
                       <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
