@@ -61,6 +61,12 @@ const SETTINGS_SECTIONS = [
     title: 'Рекламные платформы',
     desc: 'Facebook, Instagram, Яндекс Директ, VK, Google Ads, Telegram Ads',
   },
+  {
+    href: '/settings/analytics',
+    icon: '🔬',
+    title: 'Пиксели и аналитика',
+    desc: 'Яндекс Метрика, GA4, VK Pixel, Meta Pixel, TikTok Pixel, Calltouch',
+  },
 ]
 
 export default function SettingsPage() {

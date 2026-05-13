@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createServerClient } from '@/lib/supabase/server'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { MobileNav } from '@/components/layout/MobileNav'
+import PixelInjector from '@/components/PixelInjector'
 import type { UserRole } from '@/types'
 
 export default async function ProtectedLayout({
@@ -47,6 +48,9 @@ export default async function ProtectedLayout({
 
       {/* Нижняя навигация (мобильная) */}
       <MobileNav userRole={userRole} />
+
+      {/* Пиксели аналитики (Метрика, GA4, VK, FB, TikTok) */}
+      <PixelInjector />
     </div>
   )
 }
