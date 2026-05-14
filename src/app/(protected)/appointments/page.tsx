@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { CalendarView } from '@/components/appointments/CalendarView'
 
 interface Visit {
   id: string
@@ -81,6 +82,7 @@ const EMPTY_FORM = {
 
 export default function AppointmentsPage() {
   const supabase = createClient()
+  const [tab, setTab] = useState<'list' | 'calendar'>('calendar')
   const [visits, setVisits] = useState<Visit[]>([])
   const [loading, setLoading] = useState(true)
   const [dateFrom, setDateFrom] = useState(isoToday())
@@ -229,6 +231,21 @@ export default function AppointmentsPage() {
           <p className="text-sm text-gray-500">Записи из Dikidi — онлайн и через администратора</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Переключатель вид */}
+          <div className="flex border border-gray-200 rounded-lg overflow-hidden">
+            <button
+              onClick={() => setTab('calendar')}
+              className={`px-3 py-1.5 text-sm font-medium transition-colors ${tab === 'calendar' ? 'bg-violet-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            >
+              Календарь
+            </button>
+            <button
+              onClick={() => setTab('list')}
+              className={`px-3 py-1.5 text-sm font-medium transition-colors ${tab === 'list' ? 'bg-violet-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            >
+              Список
+            </button>
+          </div>
           {lastSync && <span className="text-xs text-gray-400">{lastSync}</span>}
           <button
             onClick={syncNow}
@@ -245,6 +262,14 @@ export default function AppointmentsPage() {
           </button>
         </div>
       </div>
+
+      {/* ===== CALENDAR VIEW ===== */}
+      {tab === 'calendar' && (
+        <CalendarView onNewVisit={() => { setShowForm(true); setSaveMsg(null) }} />
+      )}
+
+      {/* ===== LIST VIEW ===== */}
+      {tab === 'list' && <>
 
       {/* KPI сегодня */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
@@ -406,6 +431,8 @@ export default function AppointmentsPage() {
           </p>
         </div>
       </div>
+
+      </> } {/* end list tab */}
 
       {/* ===== MODAL: Новая запись ===== */}
       {showForm && (
