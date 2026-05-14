@@ -20,6 +20,27 @@ interface Visit {
   } | null
 }
 
+interface ClientOption {
+  id: string
+  name: string
+  phone: string | null
+  dikidi_id: string | null
+}
+
+interface ServiceOption {
+  id: string
+  name: string
+  price: number
+  duration_min: number
+}
+
+interface StaffOption {
+  id: string
+  name: string
+  role: string
+  dikidi_id: string | null
+}
+
 const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
   confirmed:  { label: 'Подтверждена', cls: 'badge-green' },
   completed:  { label: 'Завершена',    cls: 'bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full' },
@@ -46,6 +67,18 @@ function addDays(iso: string, n: number) {
   return d.toISOString().split('T')[0]
 }
 
+const EMPTY_FORM = {
+  client_id: '',
+  staff_id: '',
+  service_name: '',
+  visit_date: isoToday(),
+  start_time: '',
+  amount: '',
+  prepaid: '',
+  notes: '',
+  push_to_dikidi: true,
+}
+
 export default function AppointmentsPage() {
   const supabase = createClient()
   const [visits, setVisits] = useState<Visit[]>([])
@@ -54,6 +87,16 @@ export default function AppointmentsPage() {
   const [dateTo, setDateTo] = useState(addDays(isoToday(), 7))
   const [syncing, setSyncing] = useState(false)
   const [lastSync, setLastSync] = useState<string | null>(null)
+
+  // New appointment form
+  const [showForm, setShowForm] = useState(false)
+  const [form, setForm] = useState(EMPTY_FORM)
+  const [saving, setSaving] = useState(false)
+  const [saveMsg, setSaveMsg] = useState<string | null>(null)
+  const [clients, setClients] = useState<ClientOption[]>([])
+  const [services, setServices] = useState<ServiceOption[]>([])
+  const [staff, setStaff] = useState<StaffOption[]>([])
+  const [clientSearch, setClientSearch] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -73,6 +116,21 @@ export default function AppointmentsPage() {
   }, [dateFrom, dateTo, supabase])
 
   useEffect(() => { load() }, [load])
+
+  // Load form options once
+  useEffect(() => {
+    async function loadOptions() {
+      const [clientsRes, servicesRes, staffRes] = await Promise.all([
+        supabase.from('clients').select('id, name, phone, dikidi_id').eq('is_active', true).order('name').limit(300),
+        supabase.from('services').select('id, name, price, duration_min').eq('is_active', true).order('name'),
+        supabase.from('staff').select('id, name, role, dikidi_id').eq('is_active', true).order('name'),
+      ])
+      setClients((clientsRes.data || []) as ClientOption[])
+      setServices((servicesRes.data || []) as ServiceOption[])
+      setStaff((staffRes.data || []) as StaffOption[])
+    }
+    loadOptions()
+  }, [supabase])
 
   async function syncNow() {
     setSyncing(true)
@@ -97,6 +155,53 @@ export default function AppointmentsPage() {
     setVisits(v => v.map(x => x.id === visitId ? { ...x, status } : x))
   }
 
+  async function submitForm(e: React.FormEvent) {
+    e.preventDefault()
+    setSaving(true)
+    setSaveMsg(null)
+
+    try {
+      const res = await fetch('/api/appointments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_id: form.client_id,
+          staff_id: form.staff_id || null,
+          service_name: form.service_name,
+          visit_date: form.visit_date,
+          start_time: form.start_time || null,
+          amount: form.amount ? parseFloat(form.amount) : 0,
+          prepaid: form.prepaid ? parseFloat(form.prepaid) : 0,
+          notes: form.notes || null,
+          push_to_dikidi: form.push_to_dikidi,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setSaveMsg('Ошибка: ' + (data.error || 'неизвестная'))
+      } else {
+        let msg = 'Запись создана'
+        if (data.dikidi_id) msg += ' и добавлена в Dikidi'
+        else if (data.dikidi_error) msg += ` (только в Восторг: ${data.dikidi_error})`
+        setSaveMsg(msg)
+        setForm({ ...EMPTY_FORM, visit_date: form.visit_date })
+        await load()
+        setTimeout(() => { setShowForm(false); setSaveMsg(null) }, 2000)
+      }
+    } catch {
+      setSaveMsg('Ошибка подключения')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function handleServiceSelect(serviceId: string) {
+    const svc = services.find(s => s.id === serviceId)
+    if (svc) {
+      setForm(f => ({ ...f, service_name: svc.name, amount: String(svc.price) }))
+    }
+  }
+
   // Группировка по дате
   const grouped: Record<string, Visit[]> = {}
   for (const v of visits) {
@@ -109,6 +214,13 @@ export default function AppointmentsPage() {
   const totalToday = todayVisits.reduce((s, v) => s + (v.amount || 0), 0)
   const confirmedToday = todayVisits.filter(v => v.status !== 'cancelled' && v.status !== 'no_show').length
 
+  const filteredClients = clientSearch
+    ? clients.filter(c =>
+        c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+        (c.phone || '').includes(clientSearch)
+      ).slice(0, 10)
+    : clients.slice(0, 10)
+
   return (
     <div>
       <div className="page-header">
@@ -116,7 +228,7 @@ export default function AppointmentsPage() {
           <h1 className="page-title">Расписание</h1>
           <p className="text-sm text-gray-500">Записи из Dikidi — онлайн и через администратора</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {lastSync && <span className="text-xs text-gray-400">{lastSync}</span>}
           <button
             onClick={syncNow}
@@ -124,6 +236,12 @@ export default function AppointmentsPage() {
             className="btn-secondary text-sm"
           >
             {syncing ? '⏳ Синхронизация...' : '↻ Обновить из Dikidi'}
+          </button>
+          <button
+            onClick={() => { setShowForm(true); setSaveMsg(null) }}
+            className="btn-primary text-sm"
+          >
+            + Новая запись
           </button>
         </div>
       </div>
@@ -288,6 +406,177 @@ export default function AppointmentsPage() {
           </p>
         </div>
       </div>
+
+      {/* ===== MODAL: Новая запись ===== */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
+          <div className="bg-white w-full md:max-w-lg md:rounded-2xl rounded-t-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <h2 className="font-semibold text-gray-900">Новая запись</h2>
+              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+            </div>
+
+            <form onSubmit={submitForm} className="p-5 space-y-4">
+
+              {/* Клиент */}
+              <div>
+                <label className="label">Клиент *</label>
+                <input
+                  type="text"
+                  className="input mb-1"
+                  placeholder="Поиск по имени или телефону..."
+                  value={clientSearch}
+                  onChange={e => setClientSearch(e.target.value)}
+                />
+                <select
+                  className="input"
+                  value={form.client_id}
+                  onChange={e => setForm(f => ({ ...f, client_id: e.target.value }))}
+                  required
+                >
+                  <option value="">— выберите клиента —</option>
+                  {filteredClients.map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}{c.phone ? ` (${c.phone})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Услуга */}
+              <div>
+                <label className="label">Услуга *</label>
+                <select
+                  className="input mb-1"
+                  onChange={e => handleServiceSelect(e.target.value)}
+                  defaultValue=""
+                >
+                  <option value="">— выбрать из каталога —</option>
+                  {services.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} — {s.price} Br ({s.duration_min} мин)
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Или введите название вручную"
+                  value={form.service_name}
+                  onChange={e => setForm(f => ({ ...f, service_name: e.target.value }))}
+                  required
+                />
+              </div>
+
+              {/* Мастер */}
+              <div>
+                <label className="label">Мастер</label>
+                <select
+                  className="input"
+                  value={form.staff_id}
+                  onChange={e => setForm(f => ({ ...f, staff_id: e.target.value }))}
+                >
+                  <option value="">— без мастера —</option>
+                  {staff.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Дата и время */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Дата *</label>
+                  <input
+                    type="date"
+                    className="input"
+                    value={form.visit_date}
+                    onChange={e => setForm(f => ({ ...f, visit_date: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label">Время</label>
+                  <input
+                    type="time"
+                    className="input"
+                    value={form.start_time}
+                    onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              {/* Сумма */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Сумма (Br)</label>
+                  <input
+                    type="number"
+                    className="input"
+                    min="0"
+                    step="0.01"
+                    placeholder="0"
+                    value={form.amount}
+                    onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="label">Предоплата (Br)</label>
+                  <input
+                    type="number"
+                    className="input"
+                    min="0"
+                    step="0.01"
+                    placeholder="0"
+                    value={form.prepaid}
+                    onChange={e => setForm(f => ({ ...f, prepaid: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              {/* Примечание */}
+              <div>
+                <label className="label">Примечание</label>
+                <textarea
+                  className="input"
+                  rows={2}
+                  placeholder="Пожелания, особенности..."
+                  value={form.notes}
+                  onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                />
+              </div>
+
+              {/* Пуш в Dikidi */}
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.push_to_dikidi}
+                  onChange={e => setForm(f => ({ ...f, push_to_dikidi: e.target.checked }))}
+                  className="w-4 h-4 text-violet-600 rounded"
+                />
+                <span className="text-sm text-gray-600">Создать запись в Dikidi</span>
+              </label>
+
+              {saveMsg && (
+                <p className={`text-sm rounded-lg p-3 ${saveMsg.startsWith('Ошибка') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+                  {saveMsg}
+                </p>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <button type="submit" className="btn-primary flex-1" disabled={saving}>
+                  {saving ? 'Создаю...' : 'Создать запись'}
+                </button>
+                <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">
+                  Отмена
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
