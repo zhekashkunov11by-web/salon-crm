@@ -138,12 +138,41 @@ export default function DikidiPage() {
         </div>
       </div>
 
+      {/* Webhook URL для Dikidi */}
+      <div className="card max-w-lg mb-6 bg-green-50 border border-green-200">
+        <div className="card-body">
+          <p className="text-sm font-medium text-green-800 mb-2">Webhook — запись появляется мгновенно</p>
+          <p className="text-xs text-green-700 mb-3">
+            Вставьте этот URL в Dikidi: <strong>Настройки → API → Webhooks</strong>
+          </p>
+          <code className="text-xs bg-white px-2 py-1.5 rounded border border-green-200 block font-mono break-all">
+            https://resonant-bombolone-430790.netlify.app/api/webhooks/dikidi
+          </code>
+          <p className="text-xs text-green-600 mt-2">
+            Выберите события: <strong>appointment.created</strong>, <strong>appointment.updated</strong>, <strong>appointment.cancelled</strong>
+          </p>
+        </div>
+      </div>
+
+      {/* Как работает синхронизация */}
+      <div className="card max-w-lg mb-6 bg-blue-50 border border-blue-200">
+        <div className="card-body">
+          <p className="text-sm font-medium text-blue-800 mb-2">Как работает интеграция</p>
+          <ul className="text-xs text-blue-700 space-y-1.5">
+            <li>→ Клиент записался онлайн через Dikidi — запись мгновенно появляется в Восторге</li>
+            <li>→ Администратор создал запись в Dikidi из Instagram — то же самое</li>
+            <li>→ Все визиты идут в аналитику, зарплаты мастеров считаются автоматически</li>
+            <li>→ Кнопка «Синхронизировать» подтягивает последние 30 дней вручную</li>
+          </ul>
+        </div>
+      </div>
+
       {/* Переменные окружения */}
       <div className="card max-w-lg mb-6 bg-yellow-50 border border-yellow-200">
         <div className="card-body">
-          <p className="text-sm font-medium text-yellow-800 mb-2">Важно: переменные окружения</p>
+          <p className="text-sm font-medium text-yellow-800 mb-2">Переменные окружения (если нужны)</p>
           <p className="text-xs text-yellow-700 mb-3">
-            Для работы синхронизации также добавьте в .env.local на сервере:
+            Ключи сохраняются в базе автоматически. Если нужно продублировать в .env:
           </p>
           <pre className="text-xs bg-yellow-100 rounded p-2 font-mono text-yellow-900">
 {`DIKIDI_API_KEY=ваш_ключ

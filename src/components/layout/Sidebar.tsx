@@ -56,6 +56,11 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
     </svg>
   ),
+  calendar: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  ),
   analytics: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -76,6 +81,7 @@ const Icons = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Дашборд', icon: Icons.dashboard, roles: ['owner', 'manager', 'admin'] },
+  { href: '/appointments', label: 'Расписание', icon: Icons.calendar, roles: ['owner', 'manager', 'admin'] },
   { href: '/crm', label: 'Воронка заявок', icon: Icons.crm, roles: ['owner', 'manager', 'admin'] },
   { href: '/clients', label: 'Клиенты', icon: Icons.clients, roles: ['owner', 'manager', 'admin'] },
   { href: '/daily-report', label: 'Отчёт дня', icon: Icons.report, roles: ['owner', 'manager', 'admin'] },

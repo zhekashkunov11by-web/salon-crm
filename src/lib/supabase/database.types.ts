@@ -93,16 +93,16 @@ export type Database = {
       visits: {
         Row: {
           id: string; dikidi_id: string | null; client_id: string; staff_id: string | null
-          visit_date: string; service_name: string; amount: number; prepaid: number
+          visit_date: string; start_time: string | null; service_name: string; amount: number; prepaid: number
           status: string | null; notes: string | null; created_at: string
         }
         Insert: {
           id?: string; dikidi_id?: string | null; client_id: string; staff_id?: string | null
-          visit_date: string; service_name: string; amount?: number; prepaid?: number
+          visit_date: string; start_time?: string | null; service_name: string; amount?: number; prepaid?: number
           status?: string | null; notes?: string | null
         }
         Update: {
-          dikidi_id?: string | null; staff_id?: string | null; visit_date?: string
+          dikidi_id?: string | null; staff_id?: string | null; visit_date?: string; start_time?: string | null
           service_name?: string; amount?: number; prepaid?: number; status?: string | null; notes?: string | null
         }
       }

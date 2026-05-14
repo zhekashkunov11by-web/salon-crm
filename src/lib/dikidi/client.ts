@@ -105,3 +105,86 @@ export async function fetchDikidiPayments(
     return []
   }
 }
+
+export interface CreateDikidiAppointmentInput {
+  client_id: string       // Dikidi client ID
+  service_id: string      // Dikidi service ID
+  master_id: string       // Dikidi master (staff) ID
+  start_datetime: string  // ISO 8601: "2026-05-14T10:00:00"
+  comment?: string
+}
+
+export interface CreateDikidiAppointmentResult {
+  success: boolean
+  dikidi_id?: string
+  error?: string
+}
+
+export async function createDikidiAppointment(
+  apiKey: string,
+  companyId: string,
+  input: CreateDikidiAppointmentInput
+): Promise<CreateDikidiAppointmentResult> {
+  try {
+    const url = `${DIKIDI_BASE_URL}/appointments?company_id=${companyId}`
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        company_id: companyId,
+        client_id: input.client_id,
+        service_id: input.service_id,
+        master_id: input.master_id,
+        start_datetime: input.start_datetime,
+        comment: input.comment || '',
+      }),
+    })
+
+    if (!res.ok) {
+      const text = await res.text()
+      return { success: false, error: `Dikidi API ${res.status}: ${text}` }
+    }
+
+    const data = await res.json()
+    const id = data.data?.id || data.id || data.appointment_id
+    return { success: true, dikidi_id: String(id) }
+  } catch (e) {
+    return { success: false, error: String(e) }
+  }
+}
+
+export interface DikidiService {
+  id: string
+  name: string
+  duration: number
+  price: number
+  category?: string
+}
+
+export interface DikidiMaster {
+  id: string
+  name: string
+  specialization?: string
+}
+
+export async function fetchDikidiServices(apiKey: string, companyId: string): Promise<DikidiService[]> {
+  try {
+    const data = await dikidiFetch('/services', apiKey, companyId)
+    return data.data || data.services || data || []
+  } catch {
+    return []
+  }
+}
+
+export async function fetchDikidiMasters(apiKey: string, companyId: string): Promise<DikidiMaster[]> {
+  try {
+    const data = await dikidiFetch('/masters', apiKey, companyId)
+    return data.data || data.masters || data || []
+  } catch {
+    return []
+  }
+}
