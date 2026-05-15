@@ -8,6 +8,15 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placehol
 // Публичные маршруты (без авторизации)
 const publicRoutes = ['/login', '/auth/callback']
 
+// API маршруты без авторизации (вебхуки, синхронизация)
+const publicApiPrefixes = [
+  '/api/webhooks/',
+  '/api/inbox/amocrm',
+  '/api/meta/sync',
+  '/api/dikidi/sync',
+  '/api/telegram/',
+]
+
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
 
@@ -34,6 +43,11 @@ export async function middleware(req: NextRequest) {
 
   const { data: { session } } = await supabase.auth.getSession()
   const pathname = req.nextUrl.pathname
+
+  // Разрешаем API без авторизации
+  if (publicApiPrefixes.some(p => pathname.startsWith(p))) {
+    return res
+  }
 
   // Разрешаем публичные маршруты
   if (publicRoutes.includes(pathname)) {
