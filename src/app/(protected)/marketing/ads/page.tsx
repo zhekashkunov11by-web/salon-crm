@@ -50,7 +50,10 @@ const CHANNEL_LABEL: Record<string, { icon: string; label: string }> = {
 
 export default function AdsAnalyticsPage() {
   const supabase = createClient()
-  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7))
+  const today = new Date().toISOString().slice(0, 10)
+  const firstOfMonth = today.slice(0, 7) + '-01'
+  const [dateFrom, setDateFrom] = useState(firstOfMonth)
+  const [dateTo, setDateTo] = useState(today)
   const [rows, setRows] = useState<AggregatedAd[]>([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
@@ -60,14 +63,12 @@ export default function AdsAnalyticsPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const since = `${month}-01`
-    const until = `${month}-31`
 
     const { data } = await supabase
       .from('meta_ad_stats')
       .select('*')
-      .gte('date', since)
-      .lte('date', until)
+      .gte('date', dateFrom)
+      .lte('date', dateTo)
 
     if (data) {
       // Агрегируем по ad_id (суммируем все дни)
@@ -103,19 +104,43 @@ export default function AdsAnalyticsPage() {
       setRows(aggs)
     }
     setLoading(false)
-  }, [month, supabase])
+  }, [dateFrom, dateTo, supabase])
 
   useEffect(() => { load() }, [load])
 
   async function syncNow() {
     setSyncing(true)
     setSyncMsg(null)
+    // Синхронизируем все месяцы в выбранном диапазоне
+    const months: string[] = []
+    const d = new Date(dateFrom)
+    const end = new Date(dateTo)
+    while (d <= end) {
+      const m = d.toISOString().slice(0, 7)
+      if (!months.includes(m)) months.push(m)
+      d.setMonth(d.getMonth() + 1)
+    }
     try {
-      const res = await fetch('/api/meta/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ month }),
-      })
+      const results = await Promise.all(months.map(m =>
+        fetch('/api/meta/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ month: m }),
+        }).then(r => r.json())
+      ))
+      const ok = results.every(r => r.ok)
+      setSyncMsg(ok ? `Синхронизировано за ${months.join(', ')}` : 'Частичная ошибка при синхронизации')
+      load()
+    } catch {
+      setSyncMsg('Ошибка сети')
+    }
+    setSyncing(false)
+  }
+
+  function setAllTime() {
+    setDateFrom('2025-01-01')
+    setDateTo(today)
+  }
       const data = await res.json()
       if (data.ok) {
         const parts = Object.entries(data.results).map(([ch, r]: [string, { ads?: number; spend?: number; error?: string }]) =>
@@ -159,13 +184,17 @@ export default function AdsAnalyticsPage() {
           <h1 className="page-title">Объявления Meta</h1>
           <p className="text-sm text-gray-500">Facebook + Instagram — эффективность каждого объявления</p>
         </div>
-        <div className="flex items-center gap-2">
-          <input
-            type="month"
-            className="input"
-            value={month}
-            onChange={e => setMonth(e.target.value)}
-          />
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <input type="date" className="input text-sm py-1" value={dateFrom}
+              onChange={e => setDateFrom(e.target.value)} />
+            <span className="text-gray-400 text-sm">—</span>
+            <input type="date" className="input text-sm py-1" value={dateTo}
+              onChange={e => setDateTo(e.target.value)} />
+          </div>
+          <button onClick={setAllTime} className="text-xs text-violet-600 hover:underline whitespace-nowrap">
+            За всё время
+          </button>
           <button
             onClick={syncNow}
             disabled={syncing}
@@ -250,7 +279,7 @@ export default function AdsAnalyticsPage() {
       ) : filtered.length === 0 ? (
         <div className="card p-12 text-center">
           <p className="text-4xl mb-3">📊</p>
-          <p className="text-gray-500 font-medium">Нет данных за {month}</p>
+          <p className="text-gray-500 font-medium">Нет данных за выбранный период</p>
           <p className="text-sm text-gray-400 mt-1">Нажмите «Обновить» для синхронизации с Meta</p>
           <button onClick={syncNow} disabled={syncing} className="btn-primary mt-4">
             {syncing ? '⏳...' : '↻ Синхронизировать сейчас'}
