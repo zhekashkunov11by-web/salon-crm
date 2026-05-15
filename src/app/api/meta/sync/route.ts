@@ -11,7 +11,8 @@ interface MetaAdInsight {
   spend: string
   impressions: string
   reach: string
-  clicks: string
+  clicks: string              // все клики (включая лайки и сохранения)
+  inline_link_clicks: string  // реальные переходы по кнопке/ссылке объявления
   cpc: string
   cpm: string
   ctr: string
@@ -20,6 +21,15 @@ interface MetaAdInsight {
   date_stop: string
 }
 
+// Типы действий которые считаем заявками
+const LEAD_ACTION_TYPES = new Set([
+  'lead',
+  'onsite_conversion.lead_grouped',
+  'offsite_conversion.fb_pixel_lead',
+  'onsite_conversion.messaging_conversation_started_7d',  // нажали "написать" в объявлении
+  'onsite_conversion.total_messaging_connection',          // новое соединение в мессенджере
+])
+
 async function fetchAdInsights(
   accountId: string,
   token: string,
@@ -27,7 +37,7 @@ async function fetchAdInsights(
   until: string
 ): Promise<MetaAdInsight[]> {
   const params = new URLSearchParams({
-    fields: 'ad_id,ad_name,adset_name,campaign_name,spend,impressions,reach,clicks,cpc,cpm,ctr,actions',
+    fields: 'ad_id,ad_name,adset_name,campaign_name,spend,impressions,reach,clicks,inline_link_clicks,cpc,cpm,ctr,actions',
     time_range: JSON.stringify({ since, until }),
     time_increment: '1',
     level: 'ad',
@@ -89,13 +99,10 @@ export async function POST(req: NextRequest) {
           if (spend <= 0) continue
 
           const leads = (row.actions || [])
-            .filter(a =>
-              a.action_type === 'lead' ||
-              a.action_type === 'onsite_conversion.lead_grouped' ||
-              a.action_type === 'offsite_conversion.fb_pixel_lead' ||
-              a.action_type === 'onsite_conversion.messaging_conversation_started_7d'
-            )
+            .filter(a => LEAD_ACTION_TYPES.has(a.action_type))
             .reduce((s, a) => s + parseInt(a.value || '0'), 0)
+
+          const linkClicks = parseInt(row.inline_link_clicks || '0')
 
           // Upsert по дате + ad_id
           await supabase
@@ -110,8 +117,8 @@ export async function POST(req: NextRequest) {
               spend,
               impressions: parseInt(row.impressions || '0'),
               reach: parseInt(row.reach || '0'),
-              clicks: parseInt(row.clicks || '0'),
-              cpc: parseFloat(row.cpc || '0'),
+              clicks: linkClicks, // сохраняем именно переходы, не все клики
+              cpc: linkClicks > 0 ? spend / linkClicks : parseFloat(row.cpc || '0'),
               cpm: parseFloat(row.cpm || '0'),
               ctr: parseFloat(row.ctr || '0'),
               leads_count: leads,
@@ -133,8 +140,9 @@ export async function POST(req: NextRequest) {
           byDay[row.date_start].reach += parseInt(row.reach || '0')
           byDay[row.date_start].clicks += parseInt(row.clicks || '0')
           byDay[row.date_start].leads += (row.actions || [])
-            .filter(a => a.action_type === 'lead' || a.action_type === 'onsite_conversion.lead_grouped')
+            .filter(a => LEAD_ACTION_TYPES.has(a.action_type))
             .reduce((s, a) => s + parseInt(a.value || '0'), 0)
+          byDay[row.date_start].clicks += parseInt(row.inline_link_clicks || '0')
         }
 
         for (const [date, agg] of Object.entries(byDay)) {
