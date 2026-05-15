@@ -224,6 +224,9 @@ export default function MarketingPage() {
       <div className="page-header">
         <h1 className="page-title">Маркетинговая аналитика</h1>
         <div className="flex gap-2">
+          <a href="/marketing/ads" className="btn-secondary">
+            📊 Объявления Meta
+          </a>
           <input
             type="month"
             className="input"
