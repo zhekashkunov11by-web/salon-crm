@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -56,6 +57,11 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
     </svg>
   ),
+  inbox: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+    </svg>
+  ),
   calendar: (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -88,6 +94,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Дашборд', icon: Icons.dashboard, roles: ['owner', 'manager', 'admin'] },
   { href: '/appointments', label: 'Расписание', icon: Icons.calendar, roles: ['owner', 'manager', 'admin'] },
   { href: '/crm', label: 'Воронка заявок', icon: Icons.crm, roles: ['owner', 'manager', 'admin'] },
+  { href: '/inbox', label: 'Входящие', icon: Icons.inbox, roles: ['owner', 'manager', 'admin'] },
   { href: '/clients', label: 'Клиенты', icon: Icons.clients, roles: ['owner', 'manager', 'admin'] },
   { href: '/daily-report', label: 'Отчёт дня', icon: Icons.report, roles: ['owner', 'manager', 'admin'] },
   { href: '/expenses', label: 'Расходы', icon: Icons.expenses, roles: ['owner', 'manager', 'admin'] },
@@ -108,6 +115,7 @@ export function Sidebar({ userRole, userName }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  const [inboxUnread, setInboxUnread] = useState(0)
 
   const filteredNav = NAV_ITEMS.filter(item => item.roles.includes(userRole))
 
@@ -115,6 +123,27 @@ export function Sidebar({ userRole, userName }: SidebarProps) {
     await supabase.auth.signOut()
     router.push('/login')
   }
+
+  // Subscribe to inbox unread count
+  useEffect(() => {
+    async function loadUnread() {
+      const { data } = await supabase
+        .from('inbox_conversations')
+        .select('unread_count')
+        .eq('status', 'open')
+      const total = (data || []).reduce((s: number, c: { unread_count: number }) => s + (c.unread_count || 0), 0)
+      setInboxUnread(total)
+    }
+    loadUnread()
+
+    const channel = supabase
+      .channel('sidebar-inbox')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inbox_conversations' }, () => {
+        loadUnread()
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [supabase])
 
   return (
     <aside className="w-64 bg-white border-r border-gray-100 flex flex-col h-full">
@@ -135,6 +164,7 @@ export function Sidebar({ userRole, userName }: SidebarProps) {
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         {filteredNav.map(item => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+          const showBadge = item.href === '/inbox' && inboxUnread > 0
           return (
             <Link
               key={item.href}
@@ -142,7 +172,12 @@ export function Sidebar({ userRole, userName }: SidebarProps) {
               className={`nav-item ${isActive ? 'nav-item-active' : ''}`}
             >
               {item.icon}
-              <span>{item.label}</span>
+              <span className="flex-1">{item.label}</span>
+              {showBadge && (
+                <span className="bg-violet-600 text-white text-xs rounded-full min-w-[1.1rem] h-[1.1rem] flex items-center justify-center px-1">
+                  {inboxUnread > 99 ? '99+' : inboxUnread}
+                </span>
+              )}
             </Link>
           )
         })}

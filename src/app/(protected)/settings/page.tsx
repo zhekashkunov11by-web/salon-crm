@@ -50,6 +50,12 @@ const SETTINGS_SECTIONS = [
     desc: 'API ключ, синхронизация, лог',
   },
   {
+    href: '/settings/amocrm',
+    icon: '💬',
+    title: 'Интеграция amoCRM',
+    desc: 'Омниканальные входящие: Instagram, ВК, Telegram, WhatsApp, Facebook',
+  },
+  {
     href: '/settings/telegram',
     icon: '📱',
     title: 'Telegram уведомления',
