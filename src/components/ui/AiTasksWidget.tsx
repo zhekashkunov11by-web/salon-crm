@@ -73,7 +73,6 @@ export function AiTasksWidget() {
   if (tasks.length === 0) return null
 
   const aiTasks = tasks.filter(t => t.is_ai_generated)
-  const manualTasks = tasks.filter(t => !t.is_ai_generated)
 
   return (
     <div className="card mb-6">
