@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { HelpPanel } from '@/components/ui/HelpPanel'
 
 interface AdStat {
   ad_id: string
@@ -141,21 +142,6 @@ export default function AdsAnalyticsPage() {
     setDateFrom('2025-01-01')
     setDateTo(today)
   }
-      const data = await res.json()
-      if (data.ok) {
-        const parts = Object.entries(data.results).map(([ch, r]: [string, { ads?: number; spend?: number; error?: string }]) =>
-          r.error ? `${ch}: ошибка` : `${ch}: ${r.ads} объявлений, ${fmt(r.spend || 0)} Br`
-        )
-        setSyncMsg('Синхронизировано: ' + parts.join(' / '))
-        load()
-      } else {
-        setSyncMsg('Ошибка: ' + (data.error || 'неизвестно'))
-      }
-    } catch {
-      setSyncMsg('Ошибка сети')
-    }
-    setSyncing(false)
-  }
 
   const filtered = rows
     .filter(r => filterChannel === 'all' || r.account_channel === filterChannel)
@@ -204,6 +190,15 @@ export default function AdsAnalyticsPage() {
           </button>
         </div>
       </div>
+
+      <HelpPanel id="meta-ads" title="Как читать статистику объявлений" items={[
+        { icon: '🔄', title: 'Синхронизация', text: 'Данные подтягиваются автоматически каждый день в 06:00. Кнопка «↻ Обновить» — запустить синхронизацию прямо сейчас. Если токен истёк — зайдите в Настройки → Рекламные платформы.' },
+        { icon: '📅', title: 'Диапазон дат', text: 'Выберите период или нажмите «За всё время» — увидите статистику с начала года. Данные агрегируются по объявлениям за весь период.' },
+        { icon: '👆', title: 'CTR — кликабельность', text: 'Клики ÷ Показы × 100%. Норма для таргета: 1–3%. Зелёный >2%, серый >1%, красный <1% — объявление работает плохо.' },
+        { icon: '💰', title: 'CPC — цена клика', text: 'Расходы ÷ Клики. Учитываются только переходы по ссылке объявления (не лайки и сохранения).' },
+        { icon: '📊', title: 'CPM — цена 1000 показов', text: 'Показывает стоимость охвата аудитории. Высокий CPM = дорогая аудитория или высокая конкуренция в аукционе.' },
+        { icon: '📋', title: 'Лиды', text: 'Заявки через Lead Ads форму или сообщения в Messenger/Instagram Direct. Подключаются через настройку пикселя в рекламном кабинете.' },
+      ]} />
 
       {syncMsg && (
         <div className="mb-4 px-4 py-2.5 rounded-lg bg-green-50 border border-green-200 text-sm text-green-700">
@@ -357,15 +352,6 @@ export default function AdsAnalyticsPage() {
         </div>
       )}
 
-      <div className="card mt-6 bg-blue-50 border-blue-200 max-w-2xl">
-        <div className="card-body text-sm text-blue-700 space-y-1">
-          <p><strong>CTR</strong> — процент кликнувших от увидевших. Норма для таргета: 1–3%</p>
-          <p><strong>CPC</strong> — цена за клик. Чем ниже — тем лучше объявление</p>
-          <p><strong>CPM</strong> — цена за 1000 показов</p>
-          <p><strong>Лиды</strong> — заявки из Lead Ads или Messenger (если подключены)</p>
-          <p className="text-blue-500 text-xs pt-1">Данные синхронизируются каждый день в 06:00</p>
-        </div>
-      </div>
     </div>
   )
 }

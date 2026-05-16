@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatMoney, formatDate } from '@/lib/utils/format'
+import { HelpPanel } from '@/components/ui/HelpPanel'
 
 interface DailyReport {
   id?: string
@@ -190,6 +191,15 @@ export default function DailyReportPage() {
           onChange={e => setDate(e.target.value)}
         />
       </div>
+
+      <HelpPanel id="daily-report" title="Как заполнять ежедневный отчёт" items={[
+        { icon: '💵', title: 'Выручка по типам оплаты', text: 'Внесите суммы по наличным, карте и онлайн-оплате. Итог попадёт в Аналитику и Финансы.' },
+        { icon: '👥', title: 'Количество клиентов', text: 'Сколько клиентов было за день, из них новых. Считается конверсия и LTV.' },
+        { icon: '✅', title: 'Чек-лист', text: 'Отметьте выполненные задачи дня — уборка, открытие/закрытие, звонки клиентам и т.д.' },
+        { icon: '📊', title: 'Куда идут данные', text: 'Отчёт → Аналитика (выручка, средний чек, динамика), Финансы (доходная часть ДДС/P&L), Зарплата (база для расчёта).' },
+        { icon: '📅', title: 'Дата', text: 'По умолчанию — сегодня. Можно выбрать любой день для внесения пропущенных данных.' },
+        { icon: '🔒', title: 'Сохранение', text: 'Нажмите «Сохранить отчёт» внизу страницы. Данные сохраняются и отображаются во всех отчётах системы.' },
+      ]} />
 
       {/* Plan progress */}
       <div className="card mb-6">

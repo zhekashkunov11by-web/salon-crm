@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatMoney } from '@/lib/utils/format'
+import { HelpPanel } from '@/components/ui/HelpPanel'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -241,6 +242,16 @@ export default function MarketingPage() {
           </button>
         </div>
       </div>
+
+      <HelpPanel id="marketing" title="Как работает маркетинговая аналитика" items={[
+        { icon: '💸', title: 'Расходы на рекламу', text: 'Добавляйте вручную кнопкой «+ Добавить расходы», или они подтянутся автоматически если подключены Facebook/Instagram в Настройки → Рекламные платформы.' },
+        { icon: '📊', title: 'CPL — стоимость лида', text: 'Сумма расходов ÷ количество заявок из этого канала. Чем меньше — тем эффективнее реклама.' },
+        { icon: '💰', title: 'CAC — стоимость клиента', text: 'Расходы ÷ количество оплативших клиентов. Показывает, во сколько обходится один новый клиент.' },
+        { icon: '📈', title: 'ROMI — окупаемость', text: '(Выручка − Расходы) ÷ Расходы × 100%. Если больше 0% — реклама окупается. 200% — на каждый рубль расходов 2 рубля прибыли.' },
+        { icon: '🖱️', title: 'CPC — цена клика', text: 'Расходы ÷ количество кликов. Берётся из данных рекламного кабинета при автосинхронизации.' },
+        { icon: '📱', title: 'Объявления Meta', text: 'Кнопка «Объявления Meta» — детальная статистика по каждому объявлению Facebook и Instagram.' },
+        { icon: '🔢', title: 'Откуда берутся заявки', text: 'Из раздела Воронка заявок. Укажите источник у каждой заявки (Instagram, Facebook и т.д.) — тогда сойдётся аналитика.' },
+      ]} />
 
       {/* Форма добавления расходов */}
       {showForm && (

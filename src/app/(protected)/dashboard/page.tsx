@@ -1,5 +1,6 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { formatDate } from '@/lib/utils/format'
+import { AiTasksWidget } from '@/components/ui/AiTasksWidget'
 
 export default async function DashboardPage() {
   const supabase = createServerClient()
@@ -79,6 +80,9 @@ export default async function DashboardPage() {
           sub="По ежедн. отчёту"
         />
       </div>
+
+      {/* Задачи от AI и обычные */}
+      <AiTasksWidget />
 
       {/* Последние заявки */}
       <div className="card mb-6">

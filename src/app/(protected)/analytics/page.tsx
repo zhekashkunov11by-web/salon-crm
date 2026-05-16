@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatMoney, daysSince, formatMonth } from '@/lib/utils/format'
+import { HelpPanel } from '@/components/ui/HelpPanel'
 import {
   AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -217,6 +218,15 @@ export default function AnalyticsPage() {
         </div>
         <input type="month" className="input" value={month} onChange={e => setMonth(e.target.value)} />
       </div>
+
+      <HelpPanel id="analytics" title="Как читать аналитику" items={[
+        { icon: '📊', title: 'KPI карточки', text: 'Выручка, клиенты, средний чек, новые клиенты за выбранный месяц. Стрелка вверх/вниз — сравнение с прошлым месяцем.' },
+        { icon: '📅', title: 'Источник данных', text: 'Все цифры берутся из раздела «Отчёт дня». Вносите ежедневный отчёт — аналитика обновится автоматически.' },
+        { icon: '📈', title: 'График выручки', text: 'Динамика по дням/месяцам. Позволяет увидеть пики и провалы, сезонность.' },
+        { icon: '🍕', title: 'Источники клиентов', text: 'Откуда приходят клиенты — по данным из базы клиентов (поле «Источник»). Заполняйте источник при добавлении клиента.' },
+        { icon: '👥', title: 'Возвращаемость', text: 'Процент клиентов, которые пришли повторно. Норма для салона: 40–60%. Низкая — проблема с сервисом или напоминаниями.' },
+        { icon: '💰', title: 'Средний чек', text: 'Выручка ÷ количество визитов. Рост среднего чека = эффективность допродаж и повышение цен.' },
+      ]} />
 
       {/* KPI карточки — как в Power BI */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatMoney } from '@/lib/utils/format'
+import { HelpPanel } from '@/components/ui/HelpPanel'
 
 interface Expense {
   date: string
@@ -146,6 +147,15 @@ export default function FinancePage() {
           <button onClick={exportCSV} className="btn-secondary">↓ CSV</button>
         </div>
       </div>
+
+      <HelpPanel id="finance" title="Как читать финансовые отчёты" items={[
+        { icon: '📊', title: 'ДДС (Cash Flow)', text: 'Движение денег: сколько пришло и ушло по операционной, инвестиционной и финансовой деятельности. Показывает реальные деньги на счету.' },
+        { icon: '📈', title: 'P&L (Прибыль и убыток)', text: 'Выручка минус расходы = прибыль. В отличие от ДДС, здесь учитываются начисления, а не только платежи.' },
+        { icon: '🗂️', title: 'Категории расходов', text: 'Настройте категории в Настройки → Категории расходов. Каждой категории назначьте статью ДДС и P&L.' },
+        { icon: '📅', title: 'Выбор месяца', text: 'Данные берутся из Журнала расходов и Отчётов дня за выбранный месяц.' },
+        { icon: '⬇️', title: 'Экспорт CSV', text: 'Выгрузите данные в Excel/Google Sheets для детального анализа или передачи бухгалтеру.' },
+        { icon: '🔗', title: 'Источник данных', text: 'Доходы — из раздела Отчёт дня. Расходы — из раздела Журнал расходов. Вносите данные там, здесь видите итог.' },
+      ]} />
 
       {/* Tab switch */}
       <div className="flex gap-0 mb-6 border border-gray-200 rounded-lg overflow-hidden w-fit">

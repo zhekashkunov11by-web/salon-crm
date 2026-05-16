@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatMoney } from '@/lib/utils/format'
+import { HelpPanel } from '@/components/ui/HelpPanel'
 
 interface ServiceRates {
   manual_new_month: number
@@ -265,6 +266,15 @@ export default function SalaryPage() {
           <button onClick={() => exportCSV(currentRows)} className="btn-secondary">↓ CSV</button>
         </div>
       </div>
+
+      <HelpPanel id="salary" title="Как считается зарплата" items={[
+        { icon: '📊', title: 'Источник данных', text: 'Зарплата считается из Отчётов дня. Внесите данные в Отчёт дня — расчёт обновится автоматически.' },
+        { icon: '⚙️', title: 'Ставки мастеров', text: 'Процент от выручки, фиксированная ставка за смену — настраивается в Настройки → Сотрудники для каждого мастера отдельно.' },
+        { icon: '🧮', title: 'Как считается', text: 'Выручка мастера × его процент = начислено. Затем вычитается налог (если указан). Итог — «к выплате».' },
+        { icon: '👤', title: 'Администраторы', text: 'Вкладка «Администраторы» — фиксированная ставка за смену × количество смен в месяце.' },
+        { icon: '💰', title: 'Налог', text: 'Если у сотрудника указан процент налога — он вычитается из начисленного. Настраивается в карточке сотрудника.' },
+        { icon: '⬇️', title: 'Экспорт', text: 'Выгрузите расчёт в CSV для ведомости или передачи в бухгалтерию.' },
+      ]} />
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-4 mb-6">

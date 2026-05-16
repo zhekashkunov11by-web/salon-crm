@@ -3,6 +3,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { MobileNav } from '@/components/layout/MobileNav'
 import PixelInjector from '@/components/PixelInjector'
+import { AiAssistant } from '@/components/ui/AiAssistant'
 import type { UserRole } from '@/types'
 
 export default async function ProtectedLayout({
@@ -51,6 +52,9 @@ export default async function ProtectedLayout({
 
       {/* Пиксели аналитики (Метрика, GA4, VK, FB, TikTok) */}
       <PixelInjector />
+
+      {/* AI Помощник */}
+      <AiAssistant />
     </div>
   )
 }

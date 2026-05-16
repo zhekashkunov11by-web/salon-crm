@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatMoney, formatDate } from '@/lib/utils/format'
+import { HelpPanel } from '@/components/ui/HelpPanel'
 
 interface ExpenseCategory {
   id: string
@@ -168,6 +169,15 @@ export default function ExpensesPage() {
           </button>
         </div>
       </div>
+
+      <HelpPanel id="expenses" title="Как вести журнал расходов" items={[
+        { icon: '➕', title: 'Добавить расход', text: 'Нажмите «+ Добавить расход». Укажите дату, сумму, категорию. Расход попадёт в финансовые отчёты (ДДС и P&L).' },
+        { icon: '🗂️', title: 'Категории', text: 'Каждый расход привязывается к категории — настройте их в Настройки → Категории расходов. Категория определяет строку в ДДС/P&L.' },
+        { icon: '📊', title: 'Связь с финансами', text: 'Все расходы из этого журнала автоматически отображаются в разделе Финансы (ДДС и P&L) за соответствующий месяц.' },
+        { icon: '🔄', title: 'Рекламные расходы', text: 'Расходы на Facebook и Instagram добавляются автоматически при синхронизации. Вручную добавлять их не нужно.' },
+        { icon: '📅', title: 'Выбор месяца', text: 'Переключайте месяцы для просмотра истории расходов.' },
+        { icon: '🏷️', title: 'Статья ДДС/P&L', text: 'Категория расхода определяет, куда он попадёт: операционные/инвестиционные/финансовые расходы в ДДС; себестоимость/операционные/прочие в P&L.' },
+      ]} />
 
       {/* Add form */}
       {showForm && (

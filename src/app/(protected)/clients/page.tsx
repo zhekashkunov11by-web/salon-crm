@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatMoney, formatDate, daysSince, churnRisk } from '@/lib/utils/format'
+import { HelpPanel } from '@/components/ui/HelpPanel'
 
 interface Client {
   id: string
@@ -70,6 +71,15 @@ export default function ClientsPage() {
         <h1 className="page-title">База клиентов</h1>
         <p className="text-sm text-gray-500 self-center">{clients.length} клиентов</p>
       </div>
+
+      <HelpPanel id="clients" title="Как работает база клиентов" items={[
+        { icon: '🔍', title: 'Поиск', text: 'Ищите по имени или телефону. Красная строка — клиент не приходил больше 60 дней (риск потери).' },
+        { icon: '📅', title: 'Последний визит', text: 'Дата обновляется автоматически при внесении отчёта дня. Цвет показывает давность визита.' },
+        { icon: '💰', title: 'Выручка', text: 'Общая сумма всех оплат клиента. Считается из отчётов дня.' },
+        { icon: '📌', title: 'Источник', text: 'Откуда пришёл клиент — учитывается в маркетинговой аналитике для расчёта стоимости привлечения.' },
+        { icon: '🎂', title: 'День рождения', text: 'Укажите дату — можно использовать для поздравительных рассылок и персональных скидок.' },
+        { icon: '➕', title: 'Добавление клиента', text: 'Нажмите «+ Клиент», введите имя и телефон. Остальные поля необязательны.' },
+      ]} />
 
       {/* Filters */}
       <div className="flex gap-3 mb-4 flex-wrap">

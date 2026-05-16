@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { KanbanBoard } from '@/components/crm/KanbanBoard'
 import { ClientCard } from '@/components/crm/ClientCard'
+import { HelpPanel } from '@/components/ui/HelpPanel'
 
 interface LeadStatus {
   id: string
@@ -143,6 +144,15 @@ export default function CrmPage() {
           </button>
         </div>
       </div>
+
+      <HelpPanel id="crm" title="Как работает Воронка заявок" items={[
+        { icon: '📥', title: 'Новая заявка', text: 'Добавьте заявку вручную кнопкой «+ Заявка» или она придёт автоматически из Instagram/Telegram через amoCRM.' },
+        { icon: '🔀', title: 'Перетаскивание', text: 'Перетащите карточку в нужный столбец — статус обновится автоматически. Столбцы настраиваются в Настройки → Воронка.' },
+        { icon: '💰', title: 'Сумма сделки', text: 'Укажите сумму в карточке заявки — тогда видна потенциальная выручка по воронке.' },
+        { icon: '📊', title: 'ROMI и CPL', text: 'Данные из воронки идут в Маркетинговую аналитику: конверсия, стоимость лида, окупаемость рекламы.' },
+        { icon: '📱', title: 'Источник', text: 'Укажите источник заявки (Instagram, телефон, рекомендация) — это считается в маркетинговых отчётах.' },
+        { icon: '⏰', title: 'Следующий контакт', text: 'Установите дату следующего звонка/встречи — карточка выделится, когда срок наступит.' },
+      ]} />
 
       {/* Kanban */}
       <div className="flex-1 overflow-auto">
