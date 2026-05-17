@@ -15,13 +15,6 @@ interface PendingAction {
   data: Record<string, unknown>
 }
 
-const SUGGESTED = [
-  'Кому из клиентов сейчас написать?',
-  'Какие сейчас задачи у команды?',
-  'Зачем мы ведём ДДС?',
-  'Напиши пост для Instagram',
-  'Как обновить токен Meta?',
-]
 
 const ACTION_ICONS: Record<string, string> = {
   add_expense: '💰',
@@ -282,18 +275,6 @@ export function AiAssistant() {
               </div>
             )}
 
-            {/* Быстрые вопросы */}
-            {messages.length === 1 && !loading && (
-              <div className="space-y-1.5 pt-1">
-                <p className="text-xs text-gray-400">Попробуйте спросить:</p>
-                {SUGGESTED.map((q, i) => (
-                  <button key={i} onClick={() => send(q)}
-                    className="block w-full text-left text-xs px-3 py-2 rounded-xl bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors border border-violet-100">
-                    {q}
-                  </button>
-                ))}
-              </div>
-            )}
 
             <div ref={bottomRef} />
           </div>
