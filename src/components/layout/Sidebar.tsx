@@ -188,7 +188,7 @@ export function Sidebar({ userRole, userName }: SidebarProps) {
         <div className="px-3 py-2 mb-2">
           <p className="text-sm font-medium text-gray-900 truncate">{userName}</p>
           <p className="text-xs text-gray-400 capitalize">
-            {userRole === 'owner' ? 'Владелец' : userRole === 'manager' ? 'Управляющая' : 'Администратор'}
+            {userRole === 'owner' ? 'Владелец' : userRole === 'manager' ? 'Управляющий' : 'Администратор'}
           </p>
         </div>
         <button

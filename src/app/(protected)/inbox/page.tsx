@@ -61,6 +61,12 @@ export default function InboxPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const selectedConv = conversations.find(c => c.id === selectedId) || null
+  const [mobileView, setMobileView] = useState<'list' | 'chat'>('list')
+
+  function selectConv(id: string) {
+    setSelectedId(id)
+    setMobileView('chat')
+  }
 
   // Load conversations
   const loadConversations = useCallback(async () => {
@@ -180,9 +186,9 @@ export default function InboxPage() {
   const totalUnread = conversations.reduce((s, c) => s + (c.unread_count || 0), 0)
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] -m-6 overflow-hidden">
+    <div className="flex h-[calc(100vh-4rem)] -m-4 md:-m-6 overflow-hidden">
       {/* Left panel — conversation list */}
-      <div className="w-80 flex-shrink-0 border-r border-gray-100 flex flex-col bg-white">
+      <div className={`${mobileView === 'chat' ? 'hidden md:flex' : 'flex'} w-full md:w-80 flex-shrink-0 border-r border-gray-100 flex-col bg-white`}>
         {/* Header */}
         <div className="px-4 py-4 border-b border-gray-100">
           <div className="flex items-center justify-between mb-3">
@@ -247,7 +253,7 @@ export default function InboxPage() {
               return (
                 <button
                   key={conv.id}
-                  onClick={() => setSelectedId(conv.id)}
+                  onClick={() => selectConv(conv.id)}
                   className={`w-full text-left px-4 py-3 border-b border-gray-50 transition-colors ${
                     isSelected ? 'bg-violet-50' : 'hover:bg-gray-50'
                   }`}
@@ -289,34 +295,34 @@ export default function InboxPage() {
 
       {/* Right panel — chat */}
       {selectedConv ? (
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className={`${mobileView === 'list' ? 'hidden md:flex' : 'flex'} flex-1 flex-col min-w-0`}>
           {/* Chat header */}
-          <div className="px-5 py-3.5 border-b border-gray-100 bg-white flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`w-9 h-9 rounded-full flex items-center justify-center text-base ${
-                (CHANNEL_ICONS[selectedConv.channel] || CHANNEL_ICONS.unknown).color
-              }`}>
-                {(CHANNEL_ICONS[selectedConv.channel] || CHANNEL_ICONS.unknown).icon}
-              </div>
-              <div>
-                <p className="font-semibold text-gray-900">{selectedConv.contact_name || 'Неизвестный'}</p>
-                <p className="text-xs text-gray-400">
-                  {(CHANNEL_ICONS[selectedConv.channel] || CHANNEL_ICONS.unknown).label}
-                  {selectedConv.contact_phone && ` · ${selectedConv.contact_phone}`}
-                </p>
-              </div>
+          <div className="px-4 py-3 border-b border-gray-100 bg-white flex items-center gap-2">
+            <button
+              onClick={() => setMobileView('list')}
+              className="md:hidden text-gray-500 hover:text-gray-700 text-lg leading-none mr-1"
+            >←</button>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 ${
+              (CHANNEL_ICONS[selectedConv.channel] || CHANNEL_ICONS.unknown).color
+            }`}>
+              {(CHANNEL_ICONS[selectedConv.channel] || CHANNEL_ICONS.unknown).icon}
             </div>
-            <div className="flex items-center gap-2">
-              <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                selectedConv.status === 'open'
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-gray-100 text-gray-500'
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-gray-900 truncate">{selectedConv.contact_name || 'Неизвестный'}</p>
+              <p className="text-xs text-gray-400 truncate">
+                {(CHANNEL_ICONS[selectedConv.channel] || CHANNEL_ICONS.unknown).label}
+                {selectedConv.contact_phone && ` · ${selectedConv.contact_phone}`}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className={`text-xs px-2 py-1 rounded-full font-medium hidden sm:block ${
+                selectedConv.status === 'open' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
               }`}>
                 {selectedConv.status === 'open' ? 'Открыт' : 'Закрыт'}
               </span>
               <button
                 onClick={() => toggleStatus(selectedConv)}
-                className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+                className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
               >
                 {selectedConv.status === 'open' ? 'Закрыть' : 'Открыть'}
               </button>
