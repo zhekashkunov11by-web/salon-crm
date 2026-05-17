@@ -195,7 +195,7 @@ export function AiAssistant() {
       {/* Кнопка */}
       <button
         onClick={() => setOpen(o => !o)}
-        className="fixed bottom-5 right-5 z-40 rounded-full shadow-lg bg-violet-600 hover:bg-violet-700 text-white flex items-center justify-center transition-all active:scale-95"
+        className="fixed bottom-[76px] md:bottom-6 right-4 md:right-6 z-[60] rounded-full shadow-lg bg-violet-600 hover:bg-violet-700 text-white flex items-center justify-center transition-all active:scale-95"
         style={{ width: 52, height: 52 }}
         title="AI Помощник"
       >
@@ -214,8 +214,8 @@ export function AiAssistant() {
       {/* Окно чата */}
       {open && (
         <div
-          className="fixed bottom-20 right-5 z-40 w-[340px] sm:w-[390px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden"
-          style={{ maxHeight: 'calc(100vh - 120px)', height: 560 }}
+          className="fixed bottom-[136px] md:bottom-24 right-3 md:right-6 z-[60] w-[calc(100vw-24px)] sm:w-[390px] max-w-[420px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden"
+          style={{ maxHeight: 'calc(100vh - 160px)', height: 560 }}
         >
           {/* Шапка */}
           <div className="bg-violet-600 px-4 py-3 flex items-center gap-2.5 shrink-0">
