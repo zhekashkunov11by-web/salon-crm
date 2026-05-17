@@ -237,8 +237,8 @@ export async function POST(req: NextRequest) {
 
         const data2 = await callGroq([
           ...groqMessages,
-          { role: 'assistant', content: JSON.stringify(msg) },
-          { role: 'tool', content: result, name } as { role: string; content: string; name: string },
+          { role: 'assistant', content: null, tool_calls: msg.tool_calls } as unknown as { role: string; content: string },
+          { role: 'tool', content: result, tool_call_id: toolCall.id } as unknown as { role: string; content: string },
         ], false)
         const text2 = data2.choices?.[0]?.message?.content || 'Не удалось получить ответ'
         return NextResponse.json({ text: text2 })
