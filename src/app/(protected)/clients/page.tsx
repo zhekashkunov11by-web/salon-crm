@@ -120,8 +120,48 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      {/* Client table */}
-      <div className="card">
+      {/* Mobile card view */}
+      <div className="md:hidden space-y-2">
+        {filtered.length === 0 ? (
+          <div className="text-center text-gray-400 py-10 text-sm">
+            {search ? 'Ничего не найдено' : 'База клиентов пуста'}
+          </div>
+        ) : filtered.map(c => {
+          const risk = c.last_visit_date ? churnRisk(c.last_visit_date) : 'danger'
+          const riskBadge = {
+            safe: <span className="badge-green text-xs">Активный</span>,
+            warning: <span className="badge-yellow text-xs">В риске</span>,
+            danger: <span className="badge-red text-xs">Потерян</span>,
+          }[risk]
+          return (
+            <button
+              key={c.id}
+              className="w-full text-left bg-white rounded-xl border border-gray-100 px-4 py-3 shadow-sm active:bg-gray-50"
+              onClick={() => setSelected(selected?.id === c.id ? null : c)}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 truncate">{c.name}</p>
+                  {canSeeContacts && c.phone && (
+                    <p className="text-sm text-gray-500">{c.phone}</p>
+                  )}
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {SOURCE_LABELS[c.source || ''] || c.source || 'Источник не указан'}
+                    {c.last_visit_date && ` · ${daysSince(c.last_visit_date)} дн. назад`}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  {riskBadge}
+                  <span className="text-sm font-bold text-violet-700">{formatMoney(c.total_revenue || 0)}</span>
+                </div>
+              </div>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Desktop table */}
+      <div className="card hidden md:block">
         <div className="table-container">
           <table className="table">
             <thead>

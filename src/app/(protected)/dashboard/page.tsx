@@ -2,6 +2,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { formatDate } from '@/lib/utils/format'
 import { AiTasksWidget } from '@/components/ui/AiTasksWidget'
 import { DailyBriefingWidget } from '@/components/ui/DailyBriefingWidget'
+import { SetupBanner } from '@/components/ui/SetupBanner'
 
 export default async function DashboardPage() {
   const supabase = createServerClient()
@@ -179,17 +180,3 @@ function QuickAction({ href, icon, label }: { href: string; icon: string; label:
   )
 }
 
-function SetupBanner() {
-  return (
-    <div className="mt-6 bg-violet-50 border border-violet-200 rounded-xl p-5">
-      <h3 className="font-semibold text-violet-900 mb-2">🚀 Начало работы</h3>
-      <ol className="text-sm text-violet-800 space-y-1 list-decimal list-inside">
-        <li>Заполните <a href="/settings" className="underline">Настройки</a> — данные салона и план выручки</li>
-        <li>Добавьте <a href="/settings/staff" className="underline">Сотрудников</a> и их ставки</li>
-        <li>Настройте <a href="/settings/references" className="underline">Справочники</a> — услуги и расходники</li>
-        <li>Введите Dikidi API ключ для синхронизации данных</li>
-        <li>Настройте Telegram бот для уведомлений</li>
-      </ol>
-    </div>
-  )
-}
