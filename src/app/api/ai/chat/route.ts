@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`
+const GROQ_API_KEY = process.env.GROQ_API_KEY
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
+const MODEL = 'llama-3.3-70b-versatile'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -27,7 +28,7 @@ const SYSTEM_PROMPT = `Ты — встроенный помощник CRM-сис
 💰 ЖУРНАЛ РАСХОДОВ: все расходы салона. «+ Добавить расход» → дата, категория, сумма.
 
 📑 ФИНАНСЫ (ДДС и P&L):
-- ДДС (Движение денежных средств) — показывает РЕАЛЬНЫЕ деньги. Операционная (основная работа), Инвестиционная (оборудование), Финансовая (кредиты). ЗАЧЕМ: видно есть ли деньги прямо сейчас.
+- ДДС (Движение денежных средств) — РЕАЛЬНЫЕ деньги. Операционная (основная работа), Инвестиционная (оборудование), Финансовая (кредиты). ЗАЧЕМ: видно есть ли деньги прямо сейчас.
 - P&L (Прибыль и убытки) — экономическая эффективность. Выручка − Расходы = Прибыль. ЗАЧЕМ: видно прибыльный ли бизнес в принципе.
 - Данные: доходы из Отчёта дня, расходы из Журнала расходов.
 
@@ -37,107 +38,132 @@ const SYSTEM_PROMPT = `Ты — встроенный помощник CRM-сис
 
 === ЗАДАЧИ ДЛЯ КОМАНДЫ ===
 Ты можешь ставить задачи управляющему (manager), администратору (admin) или владельцу (owner).
-Задачи видны на главной странице (дашборд). Там же их можно отметить выполненными.
-
-Когда ставить задачи:
-- Если клиент не приходил давно → задача администратору "Позвонить [имя клиента]"
-- Если токен Meta истёк → задача управляющему "Обновить токен Facebook Ads"
-- Если не заполнен отчёт дня → задача администратору "Внести отчёт дня за [дата]"
-- Если закончились расходники → задача управляющему "Закупить [материал]"
-- Если нужно проверить показатели → задача владельцу "Проверить ROMI за месяц"
-- Если просят напомнить что-то сделать → ставь задачу с конкретным сроком
-
-Обязательно указывай в задаче:
-- Чёткое название что именно сделать
-- Кому назначено (owner/manager/admin)
-- Срок (due_date)
-- Причину (ai_reason) — почему это важно
+Задачи видны на главной странице (дашборд).
+Когда ставить задачи: клиент не приходил давно, токен истёк, не заполнен отчёт, закончились расходники, нужно проверить показатели.
 
 === КАК ВНОСИТЬ ДАННЫЕ ГОЛОСОМ ===
 Если пользователь диктует что-то для внесения в систему — используй инструменты:
 - Купили что-то / расход / оплатили → propose_add_expense
-- Пришёл новый клиент / записался / купил абонемент → propose_add_client или propose_add_lead
+- Пришёл новый клиент → propose_add_client
+- Новая заявка → propose_add_lead
+- Поставить задачу команде → propose_add_task
 - Кому написать из клиентов → get_clients_to_contact
-
-=== СОВЕТЫ ПО КЛИЕНТАМ ===
-Когда показываешь список клиентов для обзвона — для каждого предлагай конкретный текст сообщения. Учитывай что это салон красоты: массаж, косметология, процедуры по уходу. Текст должен быть тёплым, личным, без спама.
 
 Валюта: белорусские рубли (Br). Страна: Беларусь.`
 
-// Инструменты которые AI может вызывать
-const TOOLS = [{
-  functionDeclarations: [
-    {
+const TOOLS = [
+  {
+    type: 'function',
+    function: {
       name: 'get_clients_to_contact',
       description: 'Получить список клиентов которым нужно написать — давно не приходили (60+ дней без визита)',
-      parameters: { type: 'OBJECT', properties: {}, required: [] },
+      parameters: { type: 'object', properties: {}, required: [] },
     },
-    {
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_pending_tasks',
+      description: 'Получить список текущих невыполненных задач',
+      parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'propose_add_expense',
       description: 'Предложить добавить расход или покупку в журнал расходов',
       parameters: {
-        type: 'OBJECT',
+        type: 'object',
         required: ['amount', 'description'],
         properties: {
-          amount: { type: 'NUMBER', description: 'Сумма в белорусских рублях' },
-          description: { type: 'STRING', description: 'Что купили или оплатили' },
-          date: { type: 'STRING', description: 'Дата YYYY-MM-DD, по умолчанию сегодня' },
-          category_hint: { type: 'STRING', description: 'Подсказка для категории: материалы/аренда/зарплата/реклама/хоз/оборудование' },
+          amount: { type: 'number', description: 'Сумма в белорусских рублях' },
+          description: { type: 'string', description: 'Что купили или оплатили' },
+          date: { type: 'string', description: 'Дата YYYY-MM-DD, по умолчанию сегодня' },
+          category_hint: { type: 'string', description: 'материалы/аренда/зарплата/реклама/хоз/оборудование' },
         },
       },
     },
-    {
+  },
+  {
+    type: 'function',
+    function: {
       name: 'propose_add_client',
-      description: 'Предложить добавить нового клиента в базу клиентов',
+      description: 'Предложить добавить нового клиента в базу',
       parameters: {
-        type: 'OBJECT',
+        type: 'object',
         required: ['name'],
         properties: {
-          name: { type: 'STRING', description: 'Имя клиента' },
-          phone: { type: 'STRING', description: 'Номер телефона' },
-          source: { type: 'STRING', description: 'Источник: instagram/vk/avito/phone/referral/dikidi' },
-          notes: { type: 'STRING', description: 'Заметки (абонемент, процедура и т.д.)' },
+          name: { type: 'string', description: 'Имя клиента' },
+          phone: { type: 'string', description: 'Номер телефона' },
+          source: { type: 'string', description: 'instagram/vk/avito/phone/referral/dikidi' },
+          notes: { type: 'string', description: 'Заметки' },
         },
       },
     },
-    {
+  },
+  {
+    type: 'function',
+    function: {
       name: 'propose_add_lead',
       description: 'Предложить добавить заявку в воронку продаж',
       parameters: {
-        type: 'OBJECT',
+        type: 'object',
         required: ['client_name'],
         properties: {
-          client_name: { type: 'STRING', description: 'Имя клиента' },
-          phone: { type: 'STRING', description: 'Телефон' },
-          source: { type: 'STRING', description: 'Источник: instagram/facebook/phone/referral/avito' },
-          amount: { type: 'NUMBER', description: 'Сумма абонемента или сделки в рублях' },
-          notes: { type: 'STRING', description: 'Что купил, что интересует' },
+          client_name: { type: 'string', description: 'Имя клиента' },
+          phone: { type: 'string', description: 'Телефон' },
+          source: { type: 'string', description: 'instagram/facebook/phone/referral/avito' },
+          amount: { type: 'number', description: 'Сумма сделки в рублях' },
+          notes: { type: 'string', description: 'Что купил, что интересует' },
         },
       },
     },
-    {
+  },
+  {
+    type: 'function',
+    function: {
       name: 'propose_add_task',
-      description: 'Поставить задачу управляющему или администратору. Используй когда нужно напомнить, проконтролировать, сделать звонок, закупить что-то, проверить показатели.',
+      description: 'Поставить задачу управляющему или администратору',
       parameters: {
-        type: 'OBJECT',
+        type: 'object',
         required: ['title', 'assigned_role'],
         properties: {
-          title: { type: 'STRING', description: 'Краткое название задачи' },
-          description: { type: 'STRING', description: 'Подробное описание: что именно сделать и зачем' },
-          assigned_role: { type: 'STRING', description: 'Кому: owner (владелец), manager (управляющий), admin (администратор)' },
-          priority: { type: 'STRING', description: 'Приоритет: high (срочно), medium (обычная), low (не спешно)' },
-          due_date: { type: 'STRING', description: 'Срок в формате YYYY-MM-DD' },
-          ai_reason: { type: 'STRING', description: 'Почему AI ставит эту задачу — обоснование' },
+          title: { type: 'string', description: 'Краткое название задачи' },
+          description: { type: 'string', description: 'Подробное описание что сделать и зачем' },
+          assigned_role: { type: 'string', description: 'owner / manager / admin' },
+          priority: { type: 'string', description: 'high / medium / low' },
+          due_date: { type: 'string', description: 'Срок YYYY-MM-DD' },
+          ai_reason: { type: 'string', description: 'Почему AI ставит эту задачу' },
         },
       },
     },
-    {
-      name: 'get_pending_tasks',
-      description: 'Получить список текущих невыполненных задач',
-      parameters: { type: 'OBJECT', properties: {}, required: [] },
-    },
-  ],
-}]
+  },
+]
+
+async function executeGetClientsToContact() {
+  try {
+    const supabase = createServiceClient()
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - 60)
+    const { data } = await supabase
+      .from('clients')
+      .select('name, phone, last_visit_date, total_revenue, visits_count')
+      .eq('is_active', true)
+      .lt('last_visit_date', cutoff.toISOString().slice(0, 10))
+      .not('last_visit_date', 'is', null)
+      .order('last_visit_date', { ascending: true })
+      .limit(10)
+    if (!data?.length) return 'Нет клиентов без визита 60+ дней — все активны!'
+    return JSON.stringify(data.map(c => ({
+      name: c.name,
+      phone: c.phone,
+      days_ago: Math.floor((Date.now() - new Date(c.last_visit_date).getTime()) / 86400000),
+      visits: c.visits_count,
+      revenue: c.total_revenue,
+    })))
+  } catch { return 'Не удалось загрузить клиентов' }
+}
 
 async function executeGetPendingTasks() {
   try {
@@ -150,217 +176,127 @@ async function executeGetPendingTasks() {
       .limit(20)
     if (!data?.length) return 'Нет активных задач'
     return JSON.stringify(data)
-  } catch {
-    return 'Не удалось загрузить задачи'
-  }
+  } catch { return 'Не удалось загрузить задачи' }
 }
 
-async function executeGetClientsToContact() {
-  try {
-    const supabase = createServiceClient()
-    const cutoff = new Date()
-    cutoff.setDate(cutoff.getDate() - 60)
-    const cutoffStr = cutoff.toISOString().slice(0, 10)
-
-    const { data } = await supabase
-      .from('clients')
-      .select('name, phone, last_visit_date, total_revenue, visits_count')
-      .eq('is_active', true)
-      .lt('last_visit_date', cutoffStr)
-      .not('last_visit_date', 'is', null)
-      .order('last_visit_date', { ascending: true })
-      .limit(10)
-
-    if (!data?.length) return 'Нет клиентов без визита 60+ дней — все активны!'
-
-    return JSON.stringify(data.map(c => ({
-      name: c.name,
-      phone: c.phone,
-      days_ago: Math.floor((Date.now() - new Date(c.last_visit_date).getTime()) / 86400000),
-      visits: c.visits_count,
-      revenue: c.total_revenue,
-    })))
-  } catch {
-    return 'Не удалось загрузить клиентов'
+async function callGroq(messages: { role: string; content: string }[], useTools = true) {
+  const body: Record<string, unknown> = {
+    model: MODEL,
+    messages,
+    temperature: 0.7,
+    max_tokens: 1024,
   }
+  if (useTools) body.tools = TOOLS
+
+  const res = await fetch(GROQ_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${GROQ_API_KEY}`,
+    },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err?.error?.message || `Groq error ${res.status}`)
+  }
+  return res.json()
 }
 
 export async function POST(req: NextRequest) {
-  if (!GEMINI_API_KEY) {
-    return NextResponse.json({ error: 'Gemini API key не настроен' }, { status: 400 })
+  if (!GROQ_API_KEY) {
+    return NextResponse.json({ error: 'GROQ_API_KEY не настроен' }, { status: 400 })
   }
 
   try {
     const { messages } = await req.json()
 
-    // Строим историю для Gemini
-    const contents = messages.map((m: { role: string; text: string }) => ({
-      role: m.role === 'user' ? 'user' : 'model',
-      parts: [{ text: m.text }],
-    }))
+    const groqMessages = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      ...messages.map((m: { role: string; text: string }) => ({
+        role: m.role === 'user' ? 'user' : 'assistant',
+        content: m.text,
+      })),
+    ]
 
-    // Первый запрос к Gemini
-    const res = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents,
-        tools: TOOLS,
-        generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
-      }),
-    })
-
-    if (!res.ok) {
-      const err = await res.json()
-      throw new Error(err?.error?.message || `Gemini error ${res.status}`)
-    }
-
-    const data = await res.json()
-    const candidate = data.candidates?.[0]
-    const parts = candidate?.content?.parts || []
+    const data = await callGroq(groqMessages)
+    const choice = data.choices?.[0]
+    const msg = choice?.message
 
     // Проверяем — есть ли вызов функции
-    const fnCall = parts.find((p: { functionCall?: { name: string; args: Record<string, unknown> } }) => p.functionCall)
+    if (msg?.tool_calls?.length > 0) {
+      const toolCall = msg.tool_calls[0]
+      const name = toolCall.function.name
+      const args = JSON.parse(toolCall.function.arguments || '{}')
 
-    if (fnCall) {
-      const { name, args } = fnCall.functionCall as { name: string; args: Record<string, unknown> }
+      // Читающие функции — выполняем сами и возвращаем финальный ответ
+      if (name === 'get_clients_to_contact' || name === 'get_pending_tasks') {
+        const result = name === 'get_clients_to_contact'
+          ? await executeGetClientsToContact()
+          : await executeGetPendingTasks()
 
-      // Функции которые выполняем сами (чтение данных)
-      if (name === 'get_pending_tasks') {
-        const result = await executeGetPendingTasks()
-        const res2 = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-            contents: [
-              ...contents,
-              { role: 'model', parts: [{ functionCall: { name, args } }] },
-              { role: 'user', parts: [{ functionResponse: { name, response: { result } } }] },
-            ],
-            tools: TOOLS,
-            generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
-          }),
-        })
-        const data2 = await res2.json()
-        const text2 = data2.candidates?.[0]?.content?.parts?.[0]?.text || 'Не удалось получить ответ'
+        const data2 = await callGroq([
+          ...groqMessages,
+          { role: 'assistant', content: JSON.stringify(msg) },
+          { role: 'tool', content: result, name } as { role: string; content: string; name: string },
+        ], false)
+        const text2 = data2.choices?.[0]?.message?.content || 'Не удалось получить ответ'
         return NextResponse.json({ text: text2 })
       }
 
-      if (name === 'get_clients_to_contact') {
-        const result = await executeGetClientsToContact()
-
-        // Отправляем результат обратно Gemini для финального ответа
-        const res2 = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-            contents: [
-              ...contents,
-              { role: 'model', parts: [{ functionCall: { name, args } }] },
-              { role: 'user', parts: [{ functionResponse: { name, response: { result } } }] },
-            ],
-            tools: TOOLS,
-            generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
-          }),
-        })
-        const data2 = await res2.json()
-        const text2 = data2.candidates?.[0]?.content?.parts?.[0]?.text || 'Не удалось получить ответ'
-        return NextResponse.json({ text: text2 })
-      }
-
-      // Функции-предложения — возвращаем на фронт для подтверждения
+      // Функции-предложения — возвращаем на фронт
       if (name === 'propose_add_expense') {
-        const a = args as { amount: number; description: string; date?: string; category_hint?: string }
         return NextResponse.json({
-          text: `Вношу расход — проверьте и подтвердите:`,
+          text: 'Вношу расход — проверьте и подтвердите:',
           pendingAction: {
-            type: 'add_expense',
-            label: 'Добавить расход',
-            data: {
-              amount: a.amount,
-              description: a.description,
-              date: a.date || today(),
-              category_hint: a.category_hint || '',
-            },
+            type: 'add_expense', label: 'Добавить расход',
+            data: { amount: args.amount, description: args.description, date: args.date || today(), category_hint: args.category_hint || '' },
           },
         })
       }
-
       if (name === 'propose_add_client') {
-        const a = args as { name: string; phone?: string; source?: string; notes?: string }
         return NextResponse.json({
-          text: `Добавляю клиента — проверьте и подтвердите:`,
+          text: 'Добавляю клиента — проверьте и подтвердите:',
           pendingAction: {
-            type: 'add_client',
-            label: 'Добавить клиента',
-            data: {
-              name: a.name,
-              phone: a.phone || '',
-              source: a.source || 'phone',
-              notes: a.notes || '',
-            },
+            type: 'add_client', label: 'Добавить клиента',
+            data: { name: args.name, phone: args.phone || '', source: args.source || 'phone', notes: args.notes || '' },
           },
         })
       }
-
       if (name === 'propose_add_lead') {
-        const a = args as { client_name: string; phone?: string; source?: string; amount?: number; notes?: string }
         return NextResponse.json({
-          text: `Добавляю заявку в воронку — проверьте и подтвердите:`,
+          text: 'Добавляю заявку в воронку — проверьте и подтвердите:',
           pendingAction: {
-            type: 'add_lead',
-            label: 'Добавить заявку',
-            data: {
-              client_name: a.client_name,
-              phone: a.phone || '',
-              source: a.source || 'phone',
-              amount: a.amount || 0,
-              notes: a.notes || '',
-            },
+            type: 'add_lead', label: 'Добавить заявку',
+            data: { client_name: args.client_name, phone: args.phone || '', source: args.source || 'phone', amount: args.amount || 0, notes: args.notes || '' },
           },
         })
       }
-
       if (name === 'propose_add_task') {
-        const a = args as {
-          title: string; description?: string; assigned_role: string
-          priority?: string; due_date?: string; ai_reason?: string
-        }
-        const roleLabel: Record<string, string> = {
-          owner: 'Владелец', manager: 'Управляющий', admin: 'Администратор'
-        }
-        const priorityLabel: Record<string, string> = {
-          high: '🔴 Срочно', medium: '🟡 Обычная', low: '🟢 Не спешно'
-        }
+        const roleLabel: Record<string, string> = { owner: 'Владелец', manager: 'Управляющий', admin: 'Администратор' }
+        const priorityLabel: Record<string, string> = { high: '🔴 Срочно', medium: '🟡 Обычная', low: '🟢 Не спешно' }
         return NextResponse.json({
-          text: `Ставлю задачу — проверьте и подтвердите:`,
+          text: 'Ставлю задачу — проверьте и подтвердите:',
           pendingAction: {
-            type: 'add_task',
-            label: 'Поставить задачу',
+            type: 'add_task', label: 'Поставить задачу',
             data: {
-              title: a.title,
-              description: a.description || '',
-              assigned_role: a.assigned_role || 'manager',
-              assigned_label: roleLabel[a.assigned_role] || a.assigned_role,
-              priority: priorityLabel[a.priority || 'medium'],
-              priority_raw: a.priority || 'medium',
-              due_date: a.due_date || '',
-              ai_reason: a.ai_reason || '',
+              title: args.title, description: args.description || '',
+              assigned_role: args.assigned_role || 'manager',
+              assigned_label: roleLabel[args.assigned_role] || args.assigned_role,
+              priority: priorityLabel[args.priority || 'medium'],
+              priority_raw: args.priority || 'medium',
+              due_date: args.due_date || '', ai_reason: args.ai_reason || '',
             },
           },
         })
       }
     }
 
-    // Обычный текстовый ответ
-    const text = parts.find((p: { text?: string }) => p.text)?.text || 'Не удалось получить ответ'
+    const text = msg?.content || 'Не удалось получить ответ'
     return NextResponse.json({ text })
 
   } catch (err) {
-    console.error('Gemini error:', err)
+    console.error('Groq error:', err)
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }
