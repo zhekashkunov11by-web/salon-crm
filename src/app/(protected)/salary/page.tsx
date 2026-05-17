@@ -277,7 +277,7 @@ export default function SalaryPage() {
       ]} />
 
       {/* Summary */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="metric-card">
           <p className="metric-value">{formatMoney(masterRows.reduce((s, r) => s + r.revenue, 0))}</p>
           <p className="metric-label">Выручка мастеров</p>

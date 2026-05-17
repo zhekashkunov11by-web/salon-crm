@@ -236,7 +236,7 @@ export default function DailyReportPage() {
           <h2 className="font-semibold">Выручка за {formatDate(date)}</h2>
         </div>
         <div className="card-body space-y-4">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="label">💵 Наличные, Br</label>
               <input
@@ -277,7 +277,7 @@ export default function DailyReportPage() {
             <span className="text-2xl font-bold text-violet-700">{formatMoney(totalRevenue)}</span>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="label">Клиентов за день</label>
               <input

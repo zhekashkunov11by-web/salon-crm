@@ -180,7 +180,7 @@ export default function FinancePage() {
       {/* CFS Report */}
       {tab === 'cfs' && (
         <div className="space-y-4">
-          <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
             <div className="metric-card">
               <p className="metric-value text-green-600">{formatMoney(totalRevenue)}</p>
               <p className="metric-label">Входящий поток</p>
@@ -264,7 +264,7 @@ export default function FinancePage() {
       {/* PnL Report */}
       {tab === 'pnl' && (
         <div className="space-y-4">
-          <div className="grid grid-cols-4 gap-4 mb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
             <div className="metric-card">
               <p className="metric-value text-green-600">{formatMoney(totalRevenue)}</p>
               <p className="metric-label">Выручка</p>

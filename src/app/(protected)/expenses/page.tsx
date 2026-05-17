@@ -241,7 +241,7 @@ export default function ExpensesPage() {
               )}
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="label">Количество</label>
                 <input
@@ -296,7 +296,7 @@ export default function ExpensesPage() {
       )}
 
       {/* Summary */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         {['operating', 'investing', 'financing'].map(section => {
           const items = grouped[section] || []
           const sectionTotal = items.reduce((s, e) => s + e.amount, 0)
