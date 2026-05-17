@@ -18,6 +18,8 @@ interface Client {
   visits_count?: number
   is_active: boolean
   created_at: string
+  notes?: string
+  instagram?: string
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -40,6 +42,8 @@ export default function ClientsPage() {
   const [filterRisk, setFilterRisk] = useState<'all' | 'safe' | 'warning' | 'danger'>('all')
   const [selected, setSelected] = useState<Client | null>(null)
   const [role, setRole] = useState<string>('master')
+  const [editingNotes, setEditingNotes] = useState<string | null>(null)
+  const [savingNotes, setSavingNotes] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -51,6 +55,16 @@ export default function ClientsPage() {
   }, [])
 
   const canSeeContacts = role !== 'master'
+
+  async function saveNotes() {
+    if (!selected || editingNotes === null) return
+    setSavingNotes(true)
+    await supabase.from('clients').update({ notes: editingNotes || null }).eq('id', selected.id)
+    setClients(prev => prev.map(c => c.id === selected.id ? { ...c, notes: editingNotes || undefined } : c))
+    setSelected(s => s ? { ...s, notes: editingNotes || undefined } : s)
+    setEditingNotes(null)
+    setSavingNotes(false)
+  }
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -137,7 +151,7 @@ export default function ClientsPage() {
             <button
               key={c.id}
               className="w-full text-left bg-white rounded-xl border border-gray-100 px-4 py-3 shadow-sm active:bg-gray-50"
-              onClick={() => setSelected(selected?.id === c.id ? null : c)}
+              onClick={() => { setSelected(selected?.id === c.id ? null : c); setEditingNotes(null) }}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
@@ -189,7 +203,7 @@ export default function ClientsPage() {
                   <tr
                     key={c.id}
                     className="cursor-pointer"
-                    onClick={() => setSelected(selected?.id === c.id ? null : c)}
+                    onClick={() => { setSelected(selected?.id === c.id ? null : c); setEditingNotes(null) }}
                   >
                     <td className="text-xs text-gray-400 font-mono">{c.code}</td>
                     <td className="font-medium">{c.name}</td>
@@ -222,14 +236,14 @@ export default function ClientsPage() {
 
       {/* Client detail side panel */}
       {selected && (
-        <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setSelected(null)}>
+        <div className="fixed inset-0 bg-black/30 z-40" onClick={() => { setSelected(null); setEditingNotes(null) }}>
           <div
             className="absolute right-0 top-0 h-full w-full md:w-80 bg-white shadow-2xl overflow-y-auto"
             onClick={e => e.stopPropagation()}
           >
             <div className="p-5 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-semibold">{selected.name}</h2>
-              <button onClick={() => setSelected(null)} className="btn-ghost btn-sm">✕</button>
+              <button onClick={() => { setSelected(null); setEditingNotes(null) }} className="btn-ghost btn-sm">✕</button>
             </div>
             <div className="p-5 space-y-3 text-sm">
               <div>
@@ -284,6 +298,72 @@ export default function ClientsPage() {
                 <p className="label">В базе с</p>
                 <p>{formatDate(selected.created_at)}</p>
               </div>
+              <hr className="border-gray-100" />
+
+              {/* Instagram — visible to non-masters */}
+              {canSeeContacts && (
+                <div>
+                  <p className="label">Instagram</p>
+                  {selected.instagram ? (
+                    <a
+                      href={selected.instagram.startsWith('http') ? selected.instagram : `https://instagram.com/${selected.instagram.replace('@', '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-pink-600 hover:underline text-sm"
+                    >
+                      {selected.instagram}
+                    </a>
+                  ) : (
+                    <p className="text-gray-400 text-sm italic">Не указан</p>
+                  )}
+                </div>
+              )}
+
+              {/* Notes — editable by all roles */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="label">Заметки</p>
+                  {editingNotes === null && (
+                    <button
+                      onClick={() => setEditingNotes(selected.notes || '')}
+                      className="text-xs text-violet-600 hover:underline"
+                    >
+                      {selected.notes ? 'Изменить' : '+ Добавить'}
+                    </button>
+                  )}
+                </div>
+                {editingNotes !== null ? (
+                  <div className="space-y-2">
+                    <textarea
+                      className="input text-sm resize-none"
+                      rows={3}
+                      placeholder="Заметки о клиенте..."
+                      value={editingNotes}
+                      onChange={e => setEditingNotes(e.target.value)}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={saveNotes}
+                        disabled={savingNotes}
+                        className="btn-primary btn-sm"
+                      >
+                        {savingNotes ? 'Сохраняю...' : 'Сохранить'}
+                      </button>
+                      <button
+                        onClick={() => setEditingNotes(null)}
+                        className="btn-secondary btn-sm"
+                      >
+                        Отмена
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                    {selected.notes || <span className="text-gray-400 italic">Нет заметок</span>}
+                  </p>
+                )}
+              </div>
+
               <hr className="border-gray-100" />
               <a href="/crm" className="btn-primary btn-sm w-full text-center block">
                 Открыть в CRM →

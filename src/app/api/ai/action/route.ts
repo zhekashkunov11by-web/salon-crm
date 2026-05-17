@@ -1,15 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { createServiceClient, createServerClient } from '@/lib/supabase/server'
 
 const today = () => new Date().toISOString().slice(0, 10)
+
+const ROLE_EXPENSE_LIMIT: Record<string, number> = {
+  owner: Infinity,
+  manager: Infinity,
+  admin: 500,
+}
 
 export async function POST(req: NextRequest) {
   try {
     const { type, data } = await req.json()
     const supabase = createServiceClient()
 
+    // Get user role from session
+    let userRole = 'admin'
+    try {
+      const serverSupabase = createServerClient()
+      const { data: { session } } = await serverSupabase.auth.getSession()
+      if (session?.user?.id) {
+        const { data: profile } = await serverSupabase
+          .from('profiles').select('role').eq('id', session.user.id).single()
+        if (profile?.role) userRole = profile.role
+      }
+    } catch { /* use default */ }
+
     if (type === 'add_expense') {
-      // Ищем подходящую категорию по подсказке
+      // Secondary role-based expense limit guard (chat route checks first)
+      const limit = ROLE_EXPENSE_LIMIT[userRole] || 500
+      if (data.amount > limit) {
+        return NextResponse.json({
+          ok: false,
+          message: `Сумма ${data.amount} Br превышает ваш лимит (${limit} Br). Обратитесь к управляющему.`,
+        }, { status: 403 })
+      }
+
+      // Match category by hint
       const { data: categories } = await supabase
         .from('expense_categories')
         .select('id, name')
@@ -36,20 +63,29 @@ export async function POST(req: NextRequest) {
           }
           if (categoryId) break
         }
-        // Если не нашли — берём первую категорию
         if (!categoryId) categoryId = categories[0].id
       }
 
+      const paymentDate = data.date || today()
+      const recMonths = Math.max(1, Math.min(12, parseInt(data.recognition_months) || 1))
+      const recognitionStartDate = paymentDate.slice(0, 7) + '-01'
+
       const { error } = await supabase.from('expenses').insert({
-        date: data.date || today(),
+        date: paymentDate,
         amount: data.amount,
         description: data.description,
         category_id: categoryId,
+        recognition_months: recMonths,
+        recognition_start_date: recMonths > 1 ? recognitionStartDate : null,
         created_at: new Date().toISOString(),
       })
 
       if (error) throw error
-      return NextResponse.json({ ok: true, message: `Расход ${data.amount} Br «${data.description}» добавлен` })
+
+      const amortNote = recMonths > 1
+        ? ` (ДДС: ${data.amount} Br сразу · P&L: ${(data.amount / recMonths).toFixed(2)} Br/мес × ${recMonths} мес)`
+        : ''
+      return NextResponse.json({ ok: true, message: `Расход ${data.amount} Br «${data.description}» добавлен${amortNote}` })
     }
 
     if (type === 'add_client') {
@@ -58,6 +94,7 @@ export async function POST(req: NextRequest) {
         phone: data.phone || null,
         source: data.source || null,
         notes: data.notes || null,
+        instagram: data.instagram || null,
         is_active: true,
         created_at: new Date().toISOString(),
       })
@@ -67,7 +104,6 @@ export async function POST(req: NextRequest) {
     }
 
     if (type === 'add_lead') {
-      // Берём первый статус воронки
       const { data: statuses } = await supabase
         .from('lead_statuses')
         .select('id')
@@ -91,14 +127,20 @@ export async function POST(req: NextRequest) {
     }
 
     if (type === 'add_task') {
+      // Admin cannot create tasks for owner
+      let assignedRole = data.assigned_role || 'manager'
+      if (userRole === 'admin' && assignedRole === 'owner') {
+        assignedRole = 'manager'
+      }
+
       const dueDate = data.due_date
         ? new Date(data.due_date).toISOString()
-        : new Date(Date.now() + 86400000).toISOString() // завтра по умолчанию
+        : new Date(Date.now() + 86400000).toISOString()
 
       const { error } = await supabase.from('tasks').insert({
         title: data.title,
         description: data.description || null,
-        assigned_role: data.assigned_role || 'manager',
+        assigned_role: assignedRole,
         priority: data.priority_raw || 'medium',
         due_date: dueDate,
         is_done: false,
@@ -107,7 +149,7 @@ export async function POST(req: NextRequest) {
         created_at: new Date().toISOString(),
       })
       if (error) throw error
-      return NextResponse.json({ ok: true, message: `Задача «${data.title}» поставлена для ${data.assigned_label || data.assigned_role}` })
+      return NextResponse.json({ ok: true, message: `Задача «${data.title}» поставлена для ${data.assigned_label || assignedRole}` })
     }
 
     return NextResponse.json({ error: 'Неизвестное действие' }, { status: 400 })

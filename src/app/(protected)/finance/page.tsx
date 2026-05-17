@@ -11,6 +11,8 @@ interface Expense {
   category_name: string
   cfs_section: string
   pnl_section: string
+  recognition_months: number
+  recognition_start_date: string | null
 }
 
 interface DailyReport {
@@ -34,11 +36,41 @@ const PNL_SECTIONS = [
   { key: 'other', label: 'Прочие расходы' },
 ]
 
+// Add N months to a YYYY-MM string
+function addMonths(yyyymm: string, n: number): string {
+  const [y, m] = yyyymm.split('-').map(Number)
+  const d = new Date(y, m - 1 + n, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+// Subtract N months from a YYYY-MM string
+function subtractMonths(yyyymm: string, n: number): string {
+  return addMonths(yyyymm, -n)
+}
+
+// Compute the recognized P&L amount for an expense in a given month
+function recognizedAmount(expense: Expense, selectedMonth: string): number {
+  const recMonths = expense.recognition_months || 1
+  // Start month: recognition_start_date if set, else expense.date month
+  const startMonth = expense.recognition_start_date
+    ? expense.recognition_start_date.slice(0, 7)
+    : expense.date.slice(0, 7)
+  const endMonth = addMonths(startMonth, recMonths - 1)
+
+  if (selectedMonth >= startMonth && selectedMonth <= endMonth) {
+    return expense.amount / recMonths
+  }
+  return 0
+}
+
 export default function FinancePage() {
   const supabase = createClient()
   const [tab, setTab] = useState<'cfs' | 'pnl'>('cfs')
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7))
-  const [expenses, setExpenses] = useState<Expense[]>([])
+  // DDS expenses: only this month
+  const [cfsExpenses, setCfsExpenses] = useState<Expense[]>([])
+  // P&L expenses: up to 12 months back (for amortized recognition)
+  const [pnlExpenses, setPnlExpenses] = useState<Expense[]>([])
   const [reports, setReports] = useState<DailyReport[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -46,12 +78,21 @@ export default function FinancePage() {
     setLoading(true)
     const from = `${month}-01`
     const to = `${month}-31`
+    // For P&L amortization, look back up to 12 months
+    const pnlFrom = subtractMonths(month, 12) + '-01'
 
-    const [expRes, repRes] = await Promise.all([
+    const [cfsRes, pnlRes, repRes] = await Promise.all([
+      // DDS: expenses in current month only
       supabase
         .from('expenses')
-        .select('date, amount, expense_categories(name, cfs_section, pnl_section)')
+        .select('date, amount, recognition_months, recognition_start_date, expense_categories(name, cfs_section, pnl_section)')
         .gte('date', from)
+        .lte('date', to),
+      // P&L: wide range for amortized expenses
+      supabase
+        .from('expenses')
+        .select('date, amount, recognition_months, recognition_start_date, expense_categories(name, cfs_section, pnl_section)')
+        .gte('date', pnlFrom)
         .lte('date', to),
       supabase
         .from('daily_reports')
@@ -60,16 +101,17 @@ export default function FinancePage() {
         .lte('date', to),
     ])
 
-    if (expRes.data) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mapped = expRes.data.map((e: any) => ({
-        ...e,
-        category_name: e.expense_categories?.name || 'Без категории',
-        cfs_section: e.expense_categories?.cfs_section || 'operating',
-        pnl_section: e.expense_categories?.pnl_section || 'other',
-      }))
-      setExpenses(mapped as Expense[])
-    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mapExpense = (e: any): Expense => ({
+      ...e,
+      category_name: e.expense_categories?.name || 'Без категории',
+      cfs_section: e.expense_categories?.cfs_section || 'operating',
+      pnl_section: e.expense_categories?.pnl_section || 'other',
+      recognition_months: e.recognition_months || 1,
+    })
+
+    if (cfsRes.data) setCfsExpenses(cfsRes.data.map(mapExpense))
+    if (pnlRes.data) setPnlExpenses(pnlRes.data.map(mapExpense))
     if (repRes.data) setReports(repRes.data as DailyReport[])
     setLoading(false)
   }, [month])
@@ -79,9 +121,9 @@ export default function FinancePage() {
   const totalRevenue = reports.reduce((s, r) =>
     s + (r.revenue_cash || 0) + (r.revenue_card || 0) + (r.revenue_online || 0), 0)
 
-  // CFS data
+  // CFS data — uses full expense amounts in payment month
   const cfsBySection = CFS_SECTIONS.reduce((acc, s) => {
-    acc[s.key] = expenses
+    acc[s.key] = cfsExpenses
       .filter(e => e.cfs_section === s.key)
       .reduce((sum, e) => sum + e.amount, 0)
     return acc
@@ -90,11 +132,11 @@ export default function FinancePage() {
   const totalOutflow = Object.values(cfsBySection).reduce((s, v) => s + v, 0)
   const netCashFlow = totalRevenue - totalOutflow
 
-  // PnL data
+  // P&L data — uses recognized (amortized) amounts
   const pnlBySection = PNL_SECTIONS.slice(1).reduce((acc, s) => {
-    acc[s.key] = expenses
+    acc[s.key] = pnlExpenses
       .filter(e => e.pnl_section === s.key)
-      .reduce((sum, e) => sum + e.amount, 0)
+      .reduce((sum, e) => sum + recognizedAmount(e, month), 0)
     return acc
   }, {} as Record<string, number>)
 
@@ -102,6 +144,9 @@ export default function FinancePage() {
   const operatingProfit = grossProfit - (pnlBySection.opex || 0)
   const netProfit = operatingProfit - (pnlBySection.capex || 0) - (pnlBySection.other || 0)
   const marginPct = totalRevenue > 0 ? Math.round((netProfit / totalRevenue) * 100) : 0
+
+  // Check if any expense has amortization (for showing note)
+  const hasAmortized = pnlExpenses.some(e => (e.recognition_months || 1) > 1)
 
   function exportCSV() {
     const rows = tab === 'cfs'
@@ -150,7 +195,7 @@ export default function FinancePage() {
 
       <HelpPanel id="finance" title="Как читать финансовые отчёты" items={[
         { icon: '📊', title: 'ДДС (Cash Flow)', text: 'Движение денег: сколько пришло и ушло по операционной, инвестиционной и финансовой деятельности. Показывает реальные деньги на счету.' },
-        { icon: '📈', title: 'P&L (Прибыль и убыток)', text: 'Выручка минус расходы = прибыль. В отличие от ДДС, здесь учитываются начисления, а не только платежи.' },
+        { icon: '📈', title: 'P&L (Прибыль и убыток)', text: 'Выручка минус расходы = прибыль. Расходы с амортизацией (на несколько месяцев) распределяются равномерно. ДДС показывает полную сумму в день оплаты.' },
         { icon: '🗂️', title: 'Категории расходов', text: 'Настройте категории в Настройки → Категории расходов. Каждой категории назначьте статью ДДС и P&L.' },
         { icon: '📅', title: 'Выбор месяца', text: 'Данные берутся из Журнала расходов и Отчётов дня за выбранный месяц.' },
         { icon: '⬇️', title: 'Экспорт CSV', text: 'Выгрузите данные в Excel/Google Sheets для детального анализа или передачи бухгалтеру.' },
@@ -229,7 +274,7 @@ export default function FinancePage() {
 
           {/* Breakdown by category */}
           {CFS_SECTIONS.map(section => {
-            const items = expenses.filter(e => e.cfs_section === section.key)
+            const items = cfsExpenses.filter(e => e.cfs_section === section.key)
             if (items.length === 0) return null
             const grouped = items.reduce((acc, e) => {
               if (!acc[e.category_name]) acc[e.category_name] = 0
@@ -264,6 +309,12 @@ export default function FinancePage() {
       {/* PnL Report */}
       {tab === 'pnl' && (
         <div className="space-y-4">
+          {hasAmortized && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 text-xs text-blue-700">
+              P&L учитывает амортизацию: расходы на несколько месяцев распределены равномерно. ДДС показывает полную сумму в день оплаты.
+            </div>
+          )}
+
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
             <div className="metric-card">
               <p className="metric-value text-green-600">{formatMoney(totalRevenue)}</p>

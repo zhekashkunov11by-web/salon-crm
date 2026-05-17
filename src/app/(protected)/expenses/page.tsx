@@ -33,6 +33,8 @@ interface Expense {
   quantity?: number
   unit?: string
   unit_price?: number
+  recognition_months?: number
+  recognition_start_date?: string
   created_at: string
 }
 
@@ -65,6 +67,7 @@ export default function ExpensesPage() {
     description: '',
     quantity: '',
     unit_price: '',
+    recognition_months: '1',
   })
 
   const load = useCallback(async () => {
@@ -117,6 +120,7 @@ export default function ExpensesPage() {
     if (!form.category_id) return alert('Выберите категорию')
     if (!form.amount) return alert('Введите сумму')
 
+    const recMonths = Math.max(1, Math.min(12, parseInt(form.recognition_months) || 1))
     const { error } = await supabase.from('expenses').insert({
       date: form.date,
       category_id: form.category_id,
@@ -125,6 +129,8 @@ export default function ExpensesPage() {
       description: form.description || null,
       quantity: form.quantity ? parseFloat(form.quantity) : null,
       unit_price: form.unit_price ? parseFloat(form.unit_price) : null,
+      recognition_months: recMonths,
+      recognition_start_date: recMonths > 1 ? (form.date.slice(0, 7) + '-01') : null,
     })
     if (error) return alert('Ошибка: ' + error.message)
     setForm({
@@ -135,6 +141,7 @@ export default function ExpensesPage() {
       description: '',
       quantity: '',
       unit_price: '',
+      recognition_months: '1',
     })
     setShowForm(false)
     load()
@@ -287,6 +294,29 @@ export default function ExpensesPage() {
               />
             </div>
 
+            <div>
+              <label className="label">Признание в P&L</label>
+              <select
+                className="input"
+                value={form.recognition_months}
+                onChange={e => setForm(f => ({ ...f, recognition_months: e.target.value }))}
+              >
+                <option value="1">Сразу (1 месяц)</option>
+                <option value="2">2 месяца</option>
+                <option value="3">3 месяца</option>
+                <option value="6">6 месяцев</option>
+                <option value="12">12 месяцев (год)</option>
+              </select>
+              {parseInt(form.recognition_months) > 1 && form.amount && (
+                <p className="text-xs text-blue-600 mt-1">
+                  ДДС: {formatMoney(parseFloat(form.amount))} Br сразу · P&L: {formatMoney(parseFloat(form.amount) / parseInt(form.recognition_months))} Br/мес × {form.recognition_months} мес
+                </p>
+              )}
+              {parseInt(form.recognition_months) === 1 && (
+                <p className="text-xs text-gray-400 mt-1">Расход попадёт в P&L полностью в месяц оплаты</p>
+              )}
+            </div>
+
             <div className="flex gap-3">
               <button onClick={handleAdd} className="btn-primary">Добавить</button>
               <button onClick={() => setShowForm(false)} className="btn-secondary">Отмена</button>
@@ -337,7 +367,14 @@ export default function ExpensesPage() {
                     <tr key={e.id}>
                       <td className="text-gray-500 whitespace-nowrap">{formatDate(e.date)}</td>
                       <td className="font-medium">{e.category_name}</td>
-                      <td className="text-gray-500 text-sm">{e.description || '—'}</td>
+                      <td className="text-gray-500 text-sm">
+                        {e.description || '—'}
+                        {(e.recognition_months || 1) > 1 && (
+                          <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                            P&L /{e.recognition_months}мес
+                          </span>
+                        )}
+                      </td>
                       <td className="text-gray-400 text-xs">{e.account_name || '—'}</td>
                       <td className="text-right font-semibold text-red-600">{formatMoney(e.amount)}</td>
                     </tr>
