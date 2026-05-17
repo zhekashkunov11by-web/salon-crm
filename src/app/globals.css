@@ -141,7 +141,7 @@
 
   /* Страница */
   .page-header {
-    @apply flex items-center justify-between mb-6;
+    @apply flex items-center justify-between mb-6 flex-wrap gap-3;
   }
   .page-title {
     @apply text-2xl font-bold text-gray-900;

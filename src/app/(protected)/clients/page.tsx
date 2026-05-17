@@ -224,7 +224,7 @@ export default function ClientsPage() {
       {selected && (
         <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setSelected(null)}>
           <div
-            className="absolute right-0 top-0 h-full w-80 bg-white shadow-2xl overflow-y-auto"
+            className="absolute right-0 top-0 h-full w-full md:w-80 bg-white shadow-2xl overflow-y-auto"
             onClick={e => e.stopPropagation()}
           >
             <div className="p-5 border-b border-gray-100 flex items-center justify-between">
