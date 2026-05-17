@@ -1,6 +1,7 @@
 import { createServerClient } from '@/lib/supabase/server'
 import { formatDate } from '@/lib/utils/format'
 import { AiTasksWidget } from '@/components/ui/AiTasksWidget'
+import { DailyBriefingWidget } from '@/components/ui/DailyBriefingWidget'
 
 export default async function DashboardPage() {
   const supabase = createServerClient()
@@ -80,6 +81,9 @@ export default async function DashboardPage() {
           sub="По ежедн. отчёту"
         />
       </div>
+
+      {/* Ежедневный брифинг от AI */}
+      <DailyBriefingWidget role={profile?.role || 'admin'} />
 
       {/* Задачи от AI и обычные */}
       <AiTasksWidget />
