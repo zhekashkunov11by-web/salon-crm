@@ -15,7 +15,6 @@ interface PendingAction {
   data: Record<string, unknown>
 }
 
-
 const ACTION_ICONS: Record<string, string> = {
   add_expense: '💰',
   add_client: '👤',
@@ -29,6 +28,7 @@ function ActionCard({ action, onConfirm, onCancel, done }: {
   onCancel: () => void
   done?: string
 }) {
+  const hidden = new Set(['assigned_role', 'priority_raw', 'category_hint'])
   const entries = Object.entries(action.data).filter(([k, v]) => v && !hidden.has(k))
   const labels: Record<string, string> = {
     amount: 'Сумма', description: 'Описание', date: 'Дата',
@@ -37,7 +37,6 @@ function ActionCard({ action, onConfirm, onCancel, done }: {
     title: 'Задача', assigned_label: 'Кому', priority: 'Приоритет',
     due_date: 'Срок', ai_reason: 'Причина',
   }
-  const hidden = new Set(['assigned_role', 'priority_raw', 'category_hint'])
 
   if (done) {
     return (
@@ -62,16 +61,10 @@ function ActionCard({ action, onConfirm, onCancel, done }: {
         ))}
       </div>
       <div className="px-3 py-2 flex gap-2 border-t border-violet-200">
-        <button
-          onClick={onConfirm}
-          className="flex-1 text-xs py-1.5 rounded-lg bg-violet-600 text-white hover:bg-violet-700 font-medium transition-colors"
-        >
+        <button onClick={onConfirm} className="flex-1 text-xs py-1.5 rounded-lg bg-violet-600 text-white hover:bg-violet-700 font-medium transition-colors">
           ✓ Подтвердить
         </button>
-        <button
-          onClick={onCancel}
-          className="text-xs px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
-        >
+        <button onClick={onCancel} className="text-xs px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
           Отмена
         </button>
       </div>
@@ -89,6 +82,13 @@ export function AiAssistant() {
   const inputRef = useRef<HTMLInputElement>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null)
+
+  // Слушаем событие от нижнего меню (мобильная AI-кнопка)
+  useEffect(() => {
+    const handler = () => setOpen(o => !o)
+    window.addEventListener('toggle-ai-chat', handler)
+    return () => window.removeEventListener('toggle-ai-chat', handler)
+  }, [])
 
   useEffect(() => {
     if (open && messages.length === 0) {
@@ -133,26 +133,18 @@ export function AiAssistant() {
   async function send(text?: string) {
     const userText = (text || input).trim()
     if (!userText || loading) return
-
     const newMessages: Message[] = [...messages, { role: 'user', text: userText }]
     setMessages(newMessages)
     setInput('')
     setLoading(true)
-
     try {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: newMessages.map(m => ({ role: m.role, text: m.text })),
-        }),
+        body: JSON.stringify({ messages: newMessages.map(m => ({ role: m.role, text: m.text })) }),
       })
       const data = await res.json()
-      setMessages(m => [...m, {
-        role: 'assistant',
-        text: data.text || data.error || 'Ошибка',
-        pendingAction: data.pendingAction,
-      }])
+      setMessages(m => [...m, { role: 'assistant', text: data.text || data.error || 'Ошибка', pendingAction: data.pendingAction }])
     } catch {
       setMessages(m => [...m, { role: 'assistant', text: 'Ошибка сети. Попробуйте ещё раз.' }])
     }
@@ -167,36 +159,117 @@ export function AiAssistant() {
         body: JSON.stringify({ type: action.type, data: action.data }),
       })
       const data = await res.json()
-      setMessages(m => m.map((msg, i) => i === msgIndex
-        ? { ...msg, actionResult: data.ok ? data.message : ('Ошибка: ' + data.error) }
-        : msg
-      ))
+      setMessages(m => m.map((msg, i) => i === msgIndex ? { ...msg, actionResult: data.ok ? data.message : ('Ошибка: ' + data.error) } : msg))
     } catch {
-      setMessages(m => m.map((msg, i) => i === msgIndex
-        ? { ...msg, actionResult: 'Ошибка сети' }
-        : msg
-      ))
+      setMessages(m => m.map((msg, i) => i === msgIndex ? { ...msg, actionResult: 'Ошибка сети' } : msg))
     }
   }
 
   function cancelAction(msgIndex: number) {
-    setMessages(m => m.map((msg, i) => i === msgIndex
-      ? { ...msg, actionResult: 'Отменено' }
-      : msg
-    ))
+    setMessages(m => m.map((msg, i) => i === msgIndex ? { ...msg, actionResult: 'Отменено' } : msg))
   }
 
   function handleKey(e: React.KeyboardEvent) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
   }
 
+  const ChatWindow = () => (
+    <div className="flex flex-col h-full">
+      {/* Шапка */}
+      <div className="bg-violet-600 px-4 py-3 flex items-center gap-2.5 shrink-0">
+        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-sm">✨</div>
+        <div>
+          <p className="text-white font-semibold text-sm leading-tight">AI Помощник Восторг</p>
+          <p className="text-violet-200 text-xs">Llama · знает систему и клиентов</p>
+        </div>
+        <div className="ml-auto flex items-center gap-3">
+          <button onClick={() => setMessages([])} className="text-white/60 hover:text-white text-xs">Сбросить</button>
+          <button onClick={() => setOpen(false)} className="text-white/70 hover:text-white">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Сообщения */}
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+        {messages.map((m, i) => (
+          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[88%] ${m.role === 'user' ? '' : 'w-full'}`}>
+              <div className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+                m.role === 'user' ? 'bg-violet-600 text-white rounded-br-sm' : 'bg-gray-100 text-gray-800 rounded-bl-sm'
+              }`}>
+                {m.text}
+              </div>
+              {m.pendingAction && (
+                m.actionResult
+                  ? <ActionCard action={m.pendingAction} onConfirm={() => {}} onCancel={() => {}} done={m.actionResult} />
+                  : <ActionCard action={m.pendingAction} onConfirm={() => confirmAction(i, m.pendingAction!)} onCancel={() => cancelAction(i)} />
+              )}
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div className="flex justify-start">
+            <div className="bg-gray-100 rounded-2xl rounded-bl-sm px-4 py-3">
+              <div className="flex gap-1">
+                {[0, 150, 300].map(d => (
+                  <span key={d} className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: `${d}ms` }} />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Ввод */}
+      <div className="border-t border-gray-100 px-3 py-2.5 flex gap-2 shrink-0"
+        style={{ paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}>
+        <button
+          onClick={startVoice}
+          disabled={loading}
+          className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+            listening ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+          }`}
+          title="Голосовой ввод"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+          </svg>
+        </button>
+        <input
+          ref={inputRef}
+          type="text"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={handleKey}
+          placeholder={listening ? 'Слушаю...' : 'Спросите или продиктуйте...'}
+          disabled={loading || listening}
+          className="flex-1 text-sm px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-violet-400 bg-gray-50 disabled:opacity-50"
+        />
+        <button
+          onClick={() => send()}
+          disabled={!input.trim() || loading}
+          className="w-10 h-10 rounded-xl bg-violet-600 hover:bg-violet-700 disabled:opacity-40 text-white flex items-center justify-center transition-colors shrink-0"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  )
+
   return (
     <>
-      {/* Кнопка */}
+      {/* Кнопка — только на десктопе */}
       <button
         onClick={() => setOpen(o => !o)}
-        className="fixed bottom-[76px] md:bottom-6 right-4 md:right-6 z-[60] rounded-full shadow-lg bg-violet-600 hover:bg-violet-700 text-white flex items-center justify-center transition-all active:scale-95"
-        style={{ width: 52, height: 52 }}
+        className="hidden md:flex fixed bottom-6 right-6 z-[60] rounded-full shadow-lg bg-violet-600 hover:bg-violet-700 text-white items-center justify-center transition-all active:scale-95"
+        style={{ width: 56, height: 56 }}
         title="AI Помощник"
       >
         {open ? (
@@ -211,114 +284,28 @@ export function AiAssistant() {
         )}
       </button>
 
-      {/* Окно чата */}
+      {/* Мобильный чат — выезжает снизу как шторка */}
       {open && (
-        <div
-          className="fixed bottom-[136px] md:bottom-24 right-3 md:right-6 z-[60] w-[calc(100vw-24px)] sm:w-[390px] max-w-[420px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden"
-          style={{ maxHeight: 'calc(100vh - 160px)', height: 560 }}
-        >
-          {/* Шапка */}
-          <div className="bg-violet-600 px-4 py-3 flex items-center gap-2.5 shrink-0">
-            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-sm">✨</div>
-            <div>
-              <p className="text-white font-semibold text-sm leading-tight">AI Помощник Восторг</p>
-              <p className="text-violet-200 text-xs">Gemini · знает систему и клиентов</p>
+        <div className="md:hidden fixed inset-0 z-[70] flex flex-col justify-end">
+          {/* Затемнение */}
+          <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
+          {/* Шторка */}
+          <div className="relative bg-white rounded-t-2xl shadow-2xl flex flex-col"
+            style={{ height: '88vh' }}>
+            {/* Ручка */}
+            <div className="flex justify-center pt-2 pb-1 shrink-0">
+              <div className="w-10 h-1 bg-gray-300 rounded-full" />
             </div>
-            <button
-              onClick={() => { setMessages([]); }}
-              className="ml-auto text-white/60 hover:text-white text-xs"
-            >
-              Сбросить
-            </button>
+            <ChatWindow />
           </div>
+        </div>
+      )}
 
-          {/* Сообщения */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-            {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[88%] ${m.role === 'user' ? '' : 'w-full'}`}>
-                  <div className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
-                    m.role === 'user'
-                      ? 'bg-violet-600 text-white rounded-br-sm'
-                      : 'bg-gray-100 text-gray-800 rounded-bl-sm'
-                  }`}>
-                    {m.text}
-                  </div>
-                  {m.pendingAction && (
-                    m.actionResult
-                      ? <ActionCard
-                          action={m.pendingAction}
-                          onConfirm={() => {}}
-                          onCancel={() => {}}
-                          done={m.actionResult}
-                        />
-                      : <ActionCard
-                          action={m.pendingAction}
-                          onConfirm={() => confirmAction(i, m.pendingAction!)}
-                          onCancel={() => cancelAction(i)}
-                        />
-                  )}
-                </div>
-              </div>
-            ))}
-
-            {loading && (
-              <div className="flex justify-start">
-                <div className="bg-gray-100 rounded-2xl rounded-bl-sm px-4 py-3">
-                  <div className="flex gap-1">
-                    {[0, 150, 300].map(d => (
-                      <span key={d} className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"
-                        style={{ animationDelay: `${d}ms` }} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-
-            <div ref={bottomRef} />
-          </div>
-
-          {/* Ввод */}
-          <div className="border-t border-gray-100 px-3 py-2.5 flex gap-2 shrink-0">
-            {/* Микрофон */}
-            <button
-              onClick={startVoice}
-              disabled={loading}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                listening
-                  ? 'bg-red-500 text-white animate-pulse'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-              }`}
-              title="Голосовой ввод"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-              </svg>
-            </button>
-
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKey}
-              placeholder={listening ? 'Слушаю...' : 'Спросите или продиктуйте...'}
-              disabled={loading || listening}
-              className="flex-1 text-sm px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:border-violet-400 bg-gray-50 disabled:opacity-50"
-            />
-
-            <button
-              onClick={() => send()}
-              disabled={!input.trim() || loading}
-              className="w-9 h-9 rounded-xl bg-violet-600 hover:bg-violet-700 disabled:opacity-40 text-white flex items-center justify-center transition-colors shrink-0"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg>
-            </button>
-          </div>
+      {/* Десктопное окно чата */}
+      {open && (
+        <div className="hidden md:flex fixed bottom-24 right-6 z-[60] w-[390px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex-col overflow-hidden"
+          style={{ height: 560 }}>
+          <ChatWindow />
         </div>
       )}
     </>
