@@ -34,23 +34,25 @@ export default async function ProtectedLayout({
   const userName = profile.name
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Боковая навигация (десктоп) */}
+    // min-h-dvh + flex-col на мобильном, flex-row на десктопе
+    <div className="flex min-h-screen bg-gray-50">
+      {/* Боковая навигация (только на десктопе ≥768px) */}
       <div className="hidden md:flex md:flex-shrink-0">
         <Sidebar userRole={userRole} userName={userName} />
       </div>
 
-      {/* Основной контент */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-4 md:p-6 pb-28 md:pb-6">
+      {/* Основной контент — скроллится, с паддингом для нижней навигации */}
+      <main className="flex-1 overflow-y-auto overflow-x-hidden">
+        {/* pb-32 на мобильном — место для нижнего нава (64px) + safe area + запас */}
+        <div className="p-4 md:p-6 pb-32 md:pb-8">
           {children}
         </div>
       </main>
 
-      {/* Нижняя навигация (мобильная) */}
+      {/* Нижняя навигация (мобильная — JS определяет показывать или нет) */}
       <MobileNav userRole={userRole} />
 
-      {/* Пиксели аналитики (Метрика, GA4, VK, FB, TikTok) */}
+      {/* Пиксели аналитики */}
       <PixelInjector />
 
       {/* AI Помощник */}

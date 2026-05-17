@@ -10,7 +10,7 @@ interface Message {
 }
 
 interface PendingAction {
-  type: 'add_expense' | 'add_client' | 'add_lead'
+  type: 'add_expense' | 'add_client' | 'add_lead' | 'add_task'
   label: string
   data: Record<string, unknown>
 }
@@ -78,10 +78,20 @@ export function AiAssistant() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [listening, setListening] = useState(false)
+  // JS-based mobile detection (надёжнее CSS md:hidden)
+  const [isMobile, setIsMobile] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null)
+
+  // Определяем мобильный экран по ширине окна
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   // Слушаем событие от нижнего меню (мобильная AI-кнопка)
   useEffect(() => {
@@ -225,11 +235,14 @@ export function AiAssistant() {
       </div>
 
       {/* Ввод */}
-      <div className="border-t border-gray-100 px-3 py-2.5 flex gap-2 shrink-0"
-        style={{ paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}>
+      <div
+        className="border-t border-gray-100 px-3 py-2.5 flex gap-2 shrink-0"
+        style={{ paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}
+      >
         <button
           onClick={startVoice}
           disabled={loading}
+          style={{ touchAction: 'manipulation' }}
           className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
             listening ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
           }`}
@@ -253,6 +266,7 @@ export function AiAssistant() {
         <button
           onClick={() => send()}
           disabled={!input.trim() || loading}
+          style={{ touchAction: 'manipulation' }}
           className="w-10 h-10 rounded-xl bg-violet-600 hover:bg-violet-700 disabled:opacity-40 text-white flex items-center justify-center transition-colors shrink-0"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -265,34 +279,35 @@ export function AiAssistant() {
 
   return (
     <>
-      {/* Кнопка — только на десктопе */}
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="hidden md:flex fixed bottom-6 right-6 z-[60] rounded-full shadow-lg bg-violet-600 hover:bg-violet-700 text-white items-center justify-center transition-all active:scale-95"
-        style={{ width: 56, height: 56 }}
-        title="AI Помощник"
-      >
-        {open ? (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        ) : (
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-          </svg>
-        )}
-      </button>
+      {/* Десктопная кнопка — только на широких экранах (≥768px) */}
+      {!isMobile && (
+        <button
+          onClick={() => setOpen(o => !o)}
+          className="fixed bottom-6 right-6 z-[60] rounded-full shadow-lg bg-violet-600 hover:bg-violet-700 text-white flex items-center justify-center transition-all active:scale-95"
+          style={{ width: 56, height: 56 }}
+          title="AI Помощник"
+        >
+          {open ? (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+            </svg>
+          )}
+        </button>
+      )}
 
-      {/* Мобильный чат — выезжает снизу как шторка */}
-      {open && (
-        <div className="md:hidden fixed inset-0 z-[70] flex flex-col justify-end">
-          {/* Затемнение */}
+      {/* Мобильный чат — выезжает снизу как шторка (для узких экранов) */}
+      {open && isMobile && (
+        <div className="fixed inset-0 z-[70] flex flex-col justify-end">
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-          {/* Шторка */}
-          <div className="relative bg-white rounded-t-2xl shadow-2xl flex flex-col"
-            style={{ height: '88vh' }}>
-            {/* Ручка */}
+          <div
+            className="relative bg-white rounded-t-2xl shadow-2xl flex flex-col"
+            style={{ height: '90vh' }}
+          >
             <div className="flex justify-center pt-2 pb-1 shrink-0">
               <div className="w-10 h-1 bg-gray-300 rounded-full" />
             </div>
@@ -301,10 +316,12 @@ export function AiAssistant() {
         </div>
       )}
 
-      {/* Десктопное окно чата */}
-      {open && (
-        <div className="hidden md:flex fixed bottom-24 right-6 z-[60] w-[390px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex-col overflow-hidden"
-          style={{ height: 560 }}>
+      {/* Десктопное окно чата (для широких экранов) */}
+      {open && !isMobile && (
+        <div
+          className="fixed bottom-24 right-6 z-[60] w-[390px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden"
+          style={{ height: 560 }}
+        >
           <ChatWindow />
         </div>
       )}
