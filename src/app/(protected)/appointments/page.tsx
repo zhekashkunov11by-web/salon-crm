@@ -85,6 +85,18 @@ export default function AppointmentsPage() {
   const [tab, setTab] = useState<'list' | 'calendar'>('calendar')
   const [visits, setVisits] = useState<Visit[]>([])
   const [loading, setLoading] = useState(true)
+  const [role, setRole] = useState<string>('master')
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        supabase.from('profiles').select('role').eq('id', user.id).single()
+          .then(({ data }) => { if (data) setRole(data.role) })
+      }
+    })
+  }, [])
+
+  const canSeeContacts = role !== 'master'
   const [dateFrom, setDateFrom] = useState(isoToday())
   const [dateTo, setDateTo] = useState(addDays(isoToday(), 7))
   const [syncing, setSyncing] = useState(false)
@@ -362,7 +374,7 @@ export default function AppointmentsPage() {
                               </p>
                               <span className={st.cls}>{st.label}</span>
                             </div>
-                            {visit.client?.phone && (
+                            {canSeeContacts && visit.client?.phone && (
                               <p className="text-xs text-gray-400">{visit.client.phone}</p>
                             )}
                             <p className="text-sm text-gray-600 mt-0.5">{visit.service_name}</p>

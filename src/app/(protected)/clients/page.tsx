@@ -39,6 +39,18 @@ export default function ClientsPage() {
   const [search, setSearch] = useState('')
   const [filterRisk, setFilterRisk] = useState<'all' | 'safe' | 'warning' | 'danger'>('all')
   const [selected, setSelected] = useState<Client | null>(null)
+  const [role, setRole] = useState<string>('master')
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        supabase.from('profiles').select('role').eq('id', user.id).single()
+          .then(({ data }) => { if (data) setRole(data.role) })
+      }
+    })
+  }, [])
+
+  const canSeeContacts = role !== 'master'
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -116,7 +128,7 @@ export default function ClientsPage() {
               <tr>
                 <th>Код</th>
                 <th>Имя</th>
-                <th>Телефон</th>
+                {canSeeContacts && <th>Телефон</th>}
                 <th>Источник</th>
                 <th>Визитов</th>
                 <th>Выручка</th>
@@ -141,7 +153,7 @@ export default function ClientsPage() {
                   >
                     <td className="text-xs text-gray-400 font-mono">{c.code}</td>
                     <td className="font-medium">{c.name}</td>
-                    <td className="text-gray-500">{c.phone || '—'}</td>
+                    {canSeeContacts && <td className="text-gray-500">{c.phone || '—'}</td>}
                     <td className="text-xs text-gray-400">{SOURCE_LABELS[c.source || ''] || c.source || '—'}</td>
                     <td>{c.visits_count || 0}</td>
                     <td className="font-semibold text-violet-700">{formatMoney(c.total_revenue || 0)}</td>
@@ -184,16 +196,21 @@ export default function ClientsPage() {
                 <p className="label">Код клиента</p>
                 <p className="font-mono text-gray-600">{selected.code}</p>
               </div>
-              {selected.phone && (
+              {canSeeContacts && selected.phone && (
                 <div>
                   <p className="label">Телефон</p>
-                  <p>{selected.phone}</p>
+                  <a href={`tel:${selected.phone}`} className="text-violet-600 hover:underline">{selected.phone}</a>
                 </div>
               )}
-              {selected.email && (
+              {canSeeContacts && selected.email && (
                 <div>
                   <p className="label">Email</p>
                   <p>{selected.email}</p>
+                </div>
+              )}
+              {!canSeeContacts && (
+                <div className="bg-gray-50 rounded-lg px-3 py-2 text-xs text-gray-400 italic">
+                  Контакты видны только администратору
                 </div>
               )}
               {selected.birthday && (
