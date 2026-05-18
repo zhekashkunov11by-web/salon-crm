@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start -p ${PORT:-3000}",
+    "start": "node --max-old-space-size=450 node_modules/.bin/next start -p ${PORT:-3000}",
     "lint": "next lint"
   },
   "dependencies": {
