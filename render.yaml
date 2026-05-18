@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: salon-crm
+    runtime: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm install --legacy-peer-deps && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID_ALL
+        sync: false
+      - key: TELEGRAM_CHAT_ID_OWNERS
+        sync: false
+      - key: WEBHOOK_SECRET
+        sync: false
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: DIKIDI_API_KEY
+        sync: false
+      - key: DIKIDI_COMPANY_ID
+        sync: false
